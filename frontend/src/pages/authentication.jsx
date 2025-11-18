@@ -1,70 +1,119 @@
-// frontend/src/pages/authentication.jsx
-import React, { useContext, useState } from "react";
-import { AuthContext } from "../contexts/AuthContext";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../App.css";
+
+/*
+  Simple combined Sign In / Sign Up page.
+  Uses fetch to /api/auth endpoints if you have them; if not it still shows UI.
+  Replace fetch URLs if backend path differs.
+*/
 
 export default function Authentication() {
-  const { login, register } = useContext(AuthContext);
-  const [mode, setMode] = useState("signin"); // signin/signup
+  const navigate = useNavigate();
+  const [mode, setMode] = useState("signin"); // signin or signup
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState(null);
-  const nav = useNavigate();
+  const [msg, setMsg] = useState("");
 
-  const handleLogin = async () => {
-    const res = await login(username, password);
-    if (res.ok) nav("/home");
-    else setError(res.message || "Failed");
+  useEffect(() => {
+    document.body.classList.remove("dark-meeting");
+    document.body.classList.add("light-mode");
+  }, []);
+
+  const trySignIn = async () => {
+    setMsg("");
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) {
+        const t = await res.json().catch(()=>null);
+        setMsg(t?.message || "Login failed");
+        return;
+      }
+      const data = await res.json();
+      localStorage.setItem("token", data.token || "");
+      navigate("/home");
+    } catch (e) {
+      setMsg("Network error");
+    }
   };
 
-  const handleRegister = async () => {
-    const res = await register(name, username, password);
-    if (res.ok) {
+  const tryRegister = async () => {
+    setMsg("");
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, username, password }),
+      });
+      if (!res.ok) {
+        const t = await res.json().catch(()=>null);
+        setMsg(t?.message || "Register failed");
+        return;
+      }
+      setMsg("Registered. You can sign in now.");
       setMode("signin");
-      setError("Registered. Now login.");
-    } else setError(res.message || "Failed to register");
+    } catch (e) {
+      setMsg("Network error");
+    }
   };
 
   return (
-    <div>
-      <div className="navBar">
-        <div style={{ fontWeight: 700 }}>Gup-Shap</div>
-        <div style={{ color: "#aab" }}>Register / Login</div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md p-8 center-card rounded-xl bg-white shadow-lg">
+        <div className="flex justify-center gap-4 mb-6">
+          <button
+            className={`px-4 py-2 rounded ${mode === "signin" ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+            onClick={() => setMode("signin")}
+          >
+            SIGN IN
+          </button>
+          <button
+            className={`px-4 py-2 rounded ${mode === "signup" ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+            onClick={() => setMode("signup")}
+          >
+            SIGN UP
+          </button>
+        </div>
 
-      <div className="center-box">
-        <div className="card" style={{ width: 420 }}>
-          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 18 }}>
-            <button className="btn" style={{ background: mode === "signin" ? "#1572e8" : "#1f2430" }} onClick={() => setMode("signin")}>SIGN IN</button>
-            <button className="btn" style={{ background: mode === "signup" ? "#1572e8" : "#1f2430" }} onClick={() => setMode("signup")}>SIGN UP</button>
+        {msg && (
+          <div className="mb-4 text-sm text-red-600">
+            {msg}
           </div>
+        )}
 
-          {error && <div style={{ color: "#ffb4b4", marginBottom: 12 }}>{error}</div>}
-
+        <div className="space-y-4">
           {mode === "signup" && (
-            <div style={{ marginBottom: 10 }}>
-              <label className="small-muted">Name *</label>
-              <input value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: 6, marginTop: 6 }} placeholder="Full name" />
+            <div>
+              <label className="block text-sm text-gray-700">Name *</label>
+              <input className="input-default" value={name} onChange={e=>setName(e.target.value)} />
             </div>
           )}
 
-          <div style={{ marginBottom: 10 }}>
-            <label className="small-muted">Username *</label>
-            <input value={username} onChange={e => setUsername(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: 6, marginTop: 6 }} placeholder="username" />
+          <div>
+            <label className="block text-sm text-gray-700">Username *</label>
+            <input className="input-default" value={username} onChange={e=>setUsername(e.target.value)} />
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <label className="small-muted">Password *</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: 6, marginTop: 6 }} placeholder="password" />
+          <div>
+            <label className="block text-sm text-gray-700">Password *</label>
+            <input type="password" className="input-default" value={password} onChange={e=>setPassword(e.target.value)} />
           </div>
 
-          {mode === "signin" ? (
-            <button className="btn" onClick={handleLogin}>LOGIN</button>
-          ) : (
-            <button className="btn" onClick={handleRegister}>REGISTER</button>
-          )}
+          <div className="flex items-center justify-between">
+            {mode === "signin" ? (
+              <button className="btn" onClick={trySignIn}>LOGIN</button>
+            ) : (
+              <button className="btn" onClick={tryRegister}>REGISTER</button>
+            )}
+
+            <div>
+              <button className="text-sm text-gray-500" onClick={()=>navigate("/")}>Back</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

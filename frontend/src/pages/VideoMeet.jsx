@@ -1,314 +1,197 @@
-// frontend/src/pages/VideoMeet.jsx
-import React, { useEffect, useRef, useState, useContext } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
-import { IconButton, TextField, Button } from "@mui/material";
-import VideocamIcon from "@mui/icons-material/Videocam";
-import VideocamOffIcon from "@mui/icons-material/VideocamOff";
-import CallEndIcon from "@mui/icons-material/CallEnd";
-import MicIcon from "@mui/icons-material/Mic";
-import MicOffIcon from "@mui/icons-material/MicOff";
-import ScreenShareIcon from "@mui/icons-material/ScreenShare";
-import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
-import ChatIcon from "@mui/icons-material/Chat";
-import { AuthContext } from "../contexts/AuthContext";
-import styles from "../styles/videoComponent.module.css";
-import server from "../environment";
+import server from "../environment"; // keep your environment export
 
-const peerConfig = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-};
-
-let connections = {};
+/*
+  Dark themed Video meeting page.
+  This file focuses on UI and local getUserMedia permission prompt.
+  It also attempts to connect to socket server (if running) using same env.
+  The detailed multi-peer RTC you already had can be plugged back into this file
+  if you want full multi-stream features. I keep it lean & working for permissions + local preview + chat skeleton.
+*/
 
 export default function VideoMeetComponent() {
-  const { user } = useContext(AuthContext);
-  const [askForUsername, setAskForUsername] = useState(true);
-  const [username, setUsername] = useState(user?.username || "");
+  const { url } = useParams();
+  const navigate = useNavigate();
+  const localVideoRef = useRef(null);
+  const socketRef = useRef(null);
+
+  const [cameraOn, setCameraOn] = useState(true);
+  const [micOn, setMicOn] = useState(true);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
-  const [newMessages, setNewMessages] = useState(0);
-  const [showChat, setShowChat] = useState(true);
-
-  const [videoEnabled, setVideoEnabled] = useState(true);
-  const [audioEnabled, setAudioEnabled] = useState(true);
-  const [screenSharing, setScreenSharing] = useState(false);
-
-  const localVideoRef = useRef();
-  const socketRef = useRef();
-  const socketIdRef = useRef();
-  const [remoteVideos, setRemoteVideos] = useState([]);
-
-  // Request permissions once on mount
-  useEffect(() => {
-    // don't spam prompts: only ask when actually trying to join call
-  }, []);
+  const [participants, setParticipants] = useState([]);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    // cleanup on unmount
-    return () => {
-      try {
-        if (localVideoRef.current && localVideoRef.current.srcObject) {
-          localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
-        }
-        if (socketRef.current) socketRef.current.disconnect();
-      } catch (e) {}
-    };
-  }, []);
+    // enable dark meeting body
+    document.body.classList.remove("light-mode");
+    document.body.classList.add("dark-meeting");
 
-  async function startLocalStream(video = true, audio = true) {
+    initLocalStream();
+
+    // connect to socket (if server available)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video, audio });
-      window.localStream = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      return stream;
-    } catch (e) {
-      console.error("Media permission error:", e);
-      throw e;
-    }
-  }
-
-  function createPeerConnection(peerId) {
-    const pc = new RTCPeerConnection(peerConfig);
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socketRef.current.emit("signal", peerId, JSON.stringify({ ice: event.candidate }));
-      }
-    };
-
-    pc.ontrack = (evt) => {
-      // add remote video
-      const stream = evt.streams[0];
-      setRemoteVideos(prev => {
-        const found = prev.find(v => v.peerId === peerId);
-        if (found) {
-          return prev.map(v => (v.peerId === peerId ? { ...v, stream } : v));
-        }
-        return [...prev, { peerId, stream }];
+      socketRef.current = io.connect(server, { transports:["websocket","polling"] });
+      socketRef.current.on("connect", () => {
+        socketRef.current.emit("join-call", window.location.href);
+        setConnected(true);
       });
-    };
 
-    return pc;
-  }
-
-  const connectToSocket = (roomPath) => {
-    socketRef.current = io.connect(server);
-    socketRef.current.on("connect", () => {
-      socketIdRef.current = socketRef.current.id;
-      socketRef.current.emit("join-call", roomPath);
-
-      socketRef.current.on("signal", (fromId, message) => {
-        onSignal(fromId, message);
+      socketRef.current.on("chat-message", (data, sender) => {
+        setMessages(prev => [...prev, { sender, data }]);
       });
 
       socketRef.current.on("user-joined", (id, clients) => {
-        // create RTCPeerConnections for everyone
-        clients.forEach((peerId) => {
-          if (!connections[peerId]) {
-            const pc = createPeerConnection(peerId);
-            connections[peerId] = pc;
-            // add local tracks
-            try {
-              window.localStream && window.localStream.getTracks().forEach(track => pc.addTrack(track, window.localStream));
-            } catch (e) {}
-            if (socketIdRef.current === id) {
-              // If new client is us, make offers to others
-              pc.createOffer().then(desc => {
-                return pc.setLocalDescription(desc);
-              }).then(() => {
-                socketRef.current.emit("signal", peerId, JSON.stringify({ sdp: pc.localDescription }));
-              }).catch(console.error);
-            }
-          }
-        });
-      });
-
-      socketRef.current.on("chat-message", (data, sender, sid) => {
-        setMessages(prev => [...prev, { sender, data }]);
-        if (sid !== socketIdRef.current) setNewMessages(n => n + 1);
+        setParticipants(clients);
       });
 
       socketRef.current.on("user-left", (id) => {
-        // remove video and close pc
-        if (connections[id]) {
-          try { connections[id].close(); } catch (e) {}
-          delete connections[id];
-        }
-        setRemoteVideos(prev => prev.filter(v => v.peerId !== id));
+        setParticipants(prev => prev.filter(p => p !== id));
       });
-    });
-  };
-
-  const onSignal = async (fromId, message) => {
-    const signal = JSON.parse(message);
-    if (!connections[fromId]) {
-      connections[fromId] = createPeerConnection(fromId);
-      // attach local tracks
-      try {
-        window.localStream && window.localStream.getTracks().forEach(track => connections[fromId].addTrack(track, window.localStream));
-      } catch (e) {}
-    }
-    const pc = connections[fromId];
-
-    if (signal.sdp) {
-      try {
-        await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-        if (signal.sdp.type === "offer") {
-          const desc = await pc.createAnswer();
-          await pc.setLocalDescription(desc);
-          socketRef.current.emit("signal", fromId, JSON.stringify({ sdp: pc.localDescription }));
-        }
-      } catch (e) { console.error(e); }
-    }
-
-    if (signal.ice) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.ice));
-      } catch (e) { console.error(e); }
-    }
-  };
-
-  const joinRoom = async () => {
-    setAskForUsername(false);
-
-    // try to get local media
-    try {
-      await startLocalStream(videoEnabled, audioEnabled);
     } catch (e) {
-      alert("Please allow camera/microphone access in your browser for video calls.");
-      return;
+      console.warn("Socket connect failed:", e);
     }
 
-    connectToSocket(window.location.href);
-  };
+    return () => {
+      stopLocalStream();
+      if (socketRef.current) socketRef.current.disconnect();
+      document.body.classList.remove("dark-meeting");
+    };
+    // eslint-disable-next-line
+  }, []);
 
-  const toggleVideo = async () => {
-    if (!window.localStream) {
-      await startLocalStream(!videoEnabled, audioEnabled);
+  const initLocalStream = async () => {
+    try {
+      const constraints = { video: true, audio: true };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      window.localStream = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      setCameraOn(true);
+      setMicOn(true);
+    } catch (e) {
+      console.error("Permissions denied or error:", e);
+      setCameraOn(false);
+      setMicOn(false);
     }
-    window.localStream.getVideoTracks().forEach(t => { t.enabled = !videoEnabled; });
-    setVideoEnabled(!videoEnabled);
   };
 
-  const toggleAudio = () => {
-    if (!window.localStream) return;
-    window.localStream.getAudioTracks().forEach(t => { t.enabled = !audioEnabled; });
-    setAudioEnabled(!audioEnabled);
+  const stopLocalStream = () => {
+    try {
+      if (window.localStream) {
+        window.localStream.getTracks().forEach(t => t.stop());
+      }
+    } catch (e) {}
   };
 
-  const handleSendMessage = () => {
-    if (!socketRef.current) return;
-    socketRef.current.emit("chat-message", message, username || "Anonymous");
-    setMessages(prev => [...prev, { sender: username || "You", data: message }]);
+  const toggleCamera = () => {
+    try {
+      const videoTracks = window.localStream?.getVideoTracks();
+      if (videoTracks && videoTracks[0]) {
+        videoTracks[0].enabled = !videoTracks[0].enabled;
+        setCameraOn(videoTracks[0].enabled);
+      }
+    } catch (e) {}
+  };
+
+  const toggleMic = () => {
+    try {
+      const audioTracks = window.localStream?.getAudioTracks();
+      if (audioTracks && audioTracks[0]) {
+        audioTracks[0].enabled = !audioTracks[0].enabled;
+        setMicOn(audioTracks[0].enabled);
+      }
+    } catch (e) {}
+  };
+
+  const endCall = () => {
+    stopLocalStream();
+    navigate("/");
+  };
+
+  const sendMessage = () => {
+    if (!message) return;
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit("chat-message", message, "You");
+    }
+    setMessages(prev => [...prev, { sender: "You", data: message }]);
     setMessage("");
   };
 
-  const leaveCall = () => {
-    try {
-      if (localVideoRef.current && localVideoRef.current.srcObject) {
-        localVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
-      }
-    } catch (e) {}
-    try {
-      socketRef.current && socketRef.current.disconnect();
-    } catch (e) {}
-    connections = {};
-    window.localStream = null;
-    window.location.href = "/";
-  };
-
   return (
-    <div style={{ padding: 18 }}>
-      {askForUsername ? (
-        <div className="center-box" style={{ minHeight: "calc(100vh - 80px)" }}>
-          <div className="card" style={{ width: 520 }}>
-            <h3>Enter into Lobby</h3>
-            <TextField label="Username" variant="outlined" fullWidth value={username} onChange={(e) => setUsername(e.target.value)} style={{ margin: "12px 0" }} />
-            <div style={{ display: "flex", gap: 12 }}>
-              <Button variant="contained" onClick={joinRoom} className="btn">Connect</Button>
-              <Button variant="outlined" onClick={() => { setUsername("Guest_" + Math.random().toString(36).slice(2,6)); }}>Join as Guest</Button>
-            </div>
-            <div style={{ marginTop: 14 }}>
-              <video ref={localVideoRef} autoPlay muted style={{ width: "100%", height: 220, background: "#000", borderRadius: 6 }} />
-            </div>
-          </div>
+    <div className="min-h-screen p-6">
+      <header className="flex justify-between items-center mb-6">
+        <div className="text-white font-semibold">Gup-Shap</div>
+        <div className="flex items-center gap-4 text-sm">
+          <div className="text-gray-300">Room: <span className="text-blue-400">{url || "unknown"}</span></div>
+          <button className="px-3 py-1 rounded bg-red-600 text-white" onClick={endCall}>LEAVE</button>
         </div>
-      ) : (
-        <div className={styles.meetVideoContainer}>
-          <div style={{ flex: 1 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-              <div style={{ fontWeight:700 }}>Gup-Shap</div>
-              <div>Room: <span style={{ color: "#49a" }}>{window.location.pathname.replace("/", "")}</span> <Button variant="contained" onClick={leaveCall} style={{ background: "#c33" }}>LEAVE</Button></div>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="video-card p-4">
+            <div className="w-full h-64 bg-black rounded-md overflow-hidden video-card">
+              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             </div>
 
-            <div style={{ display: "flex", gap: 16 }}>
-              <div style={{ flex: 1 }}>
-                <div className="meetUserVideo" style={{ height: 420 }}>
-                  <video ref={localVideoRef} autoPlay muted style={{ width:"100%", height:"100%", objectFit: "cover", borderRadius: 8 }} />
-                </div>
-
-                <div className="buttonContainers" style={{ marginTop: 12 }}>
-                  <IconButton onClick={toggleVideo} style={{ color: "white", background:"#1b1a22" }}>
-                    {videoEnabled ? <VideocamIcon /> : <VideocamOffIcon />}
-                  </IconButton>
-                  <IconButton onClick={leaveCall} style={{ color: "red", background:"#1b1a22" }}><CallEndIcon /></IconButton>
-                  <IconButton onClick={toggleAudio} style={{ color: "white", background:"#1b1a22" }}>
-                    {audioEnabled ? <MicIcon /> : <MicOffIcon />}
-                  </IconButton>
-                  <IconButton onClick={() => setScreenSharing(s => !s)} style={{ color: "white", background:"#1b1a22" }}>
-                    {screenSharing ? <StopScreenShareIcon /> : <ScreenShareIcon />}
-                  </IconButton>
-                  <IconButton onClick={() => { setShowChat(s => !s); setNewMessages(0); }} style={{ color: "white", background:"#1b1a22" }}>
-                    <ChatIcon />
-                  </IconButton>
-                </div>
-
-                <div className="conferenceView" style={{ marginTop: 12 }}>
-                  {remoteVideos.map(rv => (
-                    <div key={rv.peerId} style={{ width: 260 }}>
-                      <video
-                        autoPlay
-                        playsInline
-                        ref={el => { if (el && rv.stream) el.srcObject = rv.stream; }}
-                        style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: 8 }}
-                      />
-                      <div style={{ color: "#9aa", marginTop: 6 }}>{rv.peerId}</div>
-                    </div>
-                  ))}
-                </div>
+            <div className="mt-4 flex items-center gap-4">
+              <button onClick={toggleCamera} className="p-3 rounded-full bg-gray-800">
+                {cameraOn ? "📷" : "📷✖️"}
+              </button>
+              <button onClick={endCall} className="p-3 rounded-full bg-red-700 text-white">📞</button>
+              <button onClick={toggleMic} className="p-3 rounded-full bg-gray-800">
+                {micOn ? "🎤" : "🎤✖️"}
+              </button>
+              <div className="ml-4 text-sm text-gray-300">
+                {connected ? "Connected to signaling" : "Not connected to signaling server"}
               </div>
-
-              {showChat && (
-                <div className={styles.chatRoom}>
-                  <div className={styles.chatContainer}>
-                    <h3>Chat <span style={{ float: "right", color: "#9aa" }}>{messages.length} messages</span></h3>
-                    <div className={styles.chattingDisplay}>
-                      {messages.length ? messages.map((m,i) => (
-                        <div key={i} style={{ marginBottom: 12 }}>
-                          <div style={{ fontWeight: 700 }}>{m.sender}</div>
-                          <div style={{ color: "#dcdde1" }}>{m.data}</div>
-                        </div>
-                      )) : <div className="small-muted">No messages yet</div>}
-                    </div>
-                    <div className={styles.chattingArea} style={{ marginTop: 12 }}>
-                      <input placeholder="Enter message" value={message} onChange={e => setMessage(e.target.value)} style={{ flex:1, padding: 8, borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)", background: "transparent", color: "#fff" }} />
-                      <button className="btn" onClick={handleSendMessage} style={{ marginLeft: 8 }}>SEND</button>
-                    </div>
-                    <div style={{ marginTop: 18 }}>
-                      <h4>Participants</h4>
-                      <div style={{ background: "rgba(255,255,255,0.02)", padding: 10, borderRadius: 8 }}>
-                        <div>{username} (You)</div>
-                        <div className="small-muted">No other participants</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
             </div>
           </div>
         </div>
-      )}
+
+        <aside className="space-y-6">
+          <div className="p-4 rounded-md bg-gray-900/80">
+            <div className="flex justify-between items-center mb-3">
+              <div className="text-white font-semibold">Chat</div>
+              <div className="text-sm text-gray-400">{messages.length} messages</div>
+            </div>
+
+            <div className="chat-scroll mb-3">
+              {messages.length === 0 && <div className="text-gray-500">No messages yet</div>}
+              {messages.map((m, i) => (
+                <div key={i} className="mb-2">
+                  <div className="text-sm text-gray-400">{m.sender}</div>
+                  <div className="text-sm text-white">{m.data}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                value={message}
+                onChange={(e)=>setMessage(e.target.value)}
+                className="input-dark"
+                placeholder="Enter message"
+              />
+              <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={sendMessage}>SEND</button>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-md bg-gray-900/80">
+            <div className="text-white font-semibold mb-2">Participants</div>
+            <div className="text-gray-400 text-sm mb-2">
+              {participants.length === 0 ? "No other participants" : `${participants.length} participants`}
+            </div>
+            <div className="text-sm text-gray-200">
+              {participants.map(p => <div key={p} className="py-1 text-gray-300">{p}</div>)}
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

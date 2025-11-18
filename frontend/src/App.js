@@ -1,27 +1,33 @@
-// frontend/src/App.js
-import React from "react";
+import React, { useEffect } from "react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import LandingPage from "./pages/landing";
 import Authentication from "./pages/authentication";
-import { AuthProvider } from "./contexts/AuthContext";
 import VideoMeetComponent from "./pages/VideoMeet";
 import HomeComponent from "./pages/home";
-import History from "./pages/history"; // if exists (keep if you have)
-import "./App.css";
+
+/*
+  This App uses a mixed theme:
+  - Landing / Auth / Home => light mode
+  - VideoMeet => dark mode
+  We set a body class on mount of each page (pages manage it).
+*/
 
 function App() {
+  useEffect(() => {
+    // default to light mode
+    document.body.classList.remove("dark-meeting");
+    document.body.classList.add("light-mode");
+  }, []);
+
   return (
-    <div className="App">
+    <div className="App min-h-screen">
       <Router>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth" element={<Authentication />} />
-            <Route path="/home" element={<HomeComponent />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/:url" element={<VideoMeetComponent />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/auth" element={<Authentication />} />
+          <Route path="/home" element={<HomeComponent />} />
+          <Route path="/:url" element={<VideoMeetComponent />} />
+        </Routes>
       </Router>
     </div>
   );

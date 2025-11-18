@@ -1,56 +1,56 @@
-// frontend/src/pages/home.jsx
-import React, { useContext, useState } from "react";
-import withAuth from "../utils/withAuth";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, IconButton, TextField } from "@mui/material";
-import RestoreIcon from "@mui/icons-material/Restore";
-import { AuthContext } from "../contexts/AuthContext";
-import "../App.css";
 
-function HomeComponent() {
-  let navigate = useNavigate();
+export default function HomeComponent() {
+  const navigate = useNavigate();
   const [meetingCode, setMeetingCode] = useState("");
-  const { addToUserHistory, logout } = useContext(AuthContext);
 
-  let handleJoinVideoCall = async () => {
-    if (!meetingCode) meetingCode = Math.random().toString(36).slice(2, 8);
-    await addToUserHistory(meetingCode);
+  useEffect(() => {
+    document.body.classList.remove("dark-meeting");
+    document.body.classList.add("light-mode");
+  }, []);
+
+  const handleJoin = () => {
+    if (!meetingCode) return alert("Enter meeting code or open a new one");
     navigate(`/${meetingCode}`);
   };
 
+  const createNew = () => {
+    const rnd = Math.random().toString(36).slice(2,9);
+    navigate(`/${rnd}`);
+  };
+
   return (
-    <>
-      <div className="navBar">
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <h2>Gup-Shap</h2>
+    <div className="min-h-screen">
+      <header className="px-6 py-4 flex justify-between items-center border-b">
+        <div className="font-semibold text-lg">Gup-Shap</div>
+        <div className="flex items-center gap-4">
+          <button className="text-gray-700" onClick={()=>navigate("/history")}>History</button>
+          <button className="btn" onClick={()=>{
+            localStorage.removeItem("token");
+            navigate("/auth");
+          }}>Logout</button>
         </div>
+      </header>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <IconButton onClick={() => navigate("/history")}>
-            <RestoreIcon />
-          </IconButton>
-          <p>History</p>
-          <Button onClick={() => { logout(); navigate("/auth"); }}>
-            Logout
-          </Button>
-        </div>
-      </div>
+      <main className="container mx-auto px-8 py-24">
+        <div className="grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            <h2 className="text-2xl font-bold mb-3">Providing Quality Video Calls</h2>
+            <p className="text-gray-600 mb-6">Enter a meeting code or create a new one to start a call.</p>
 
-      <div className="meetContainer" style={{ display: "flex", padding: "40px" }}>
-        <div className="leftPanel" style={{ flex: 1 }}>
-          <h2>Providing Quality Video Calls</h2>
-          <div style={{ display: 'flex', gap: "10px", marginTop: 16 }}>
-            <TextField value={meetingCode} onChange={e => setMeetingCode(e.target.value)} id="outlined-basic" label="Meeting Code" variant="outlined" />
-            <Button onClick={handleJoinVideoCall} variant="contained">Join</Button>
+            <div className="flex gap-3">
+              <input className="input-default" placeholder="Meeting Code" value={meetingCode} onChange={(e)=>setMeetingCode(e.target.value)} />
+              <button className="btn" onClick={handleJoin}>Join</button>
+              <button className="px-3 py-2 rounded-md border border-gray-200" onClick={createNew}>New</button>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <img src="/mobile.png" className="w-64" alt="mobile preview" />
           </div>
         </div>
-
-        <div className='rightPanel' style={{ width: 420, display: "flex", justifyContent: "center", alignItems: "center" }}>
-          <img srcSet='/logo3.png' alt="logo" style={{ width: 270 }} />
-        </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
-
-export default withAuth(HomeComponent);
