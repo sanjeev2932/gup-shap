@@ -1,62 +1,46 @@
-import React, { useContext, useState } from 'react'
-import withAuth from '../utils/withAuth'
-import { useNavigate } from 'react-router-dom'
-import { Button, IconButton, TextField } from '@mui/material';
-import RestoreIcon from '@mui/icons-material/Restore';
-import { AuthContext } from '../contexts/AuthContext';
+// frontend/src/pages/home.jsx
+import React, { useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../index.css"; // ensures global styles applied
 
-function HomeComponent() {
+export default function HomeComponent() {
   let navigate = useNavigate();
   const [meetingCode, setMeetingCode] = useState("");
-  const { addToUserHistory } = useContext(AuthContext);
 
-  let handleJoinVideoCall = async () => {
-    if (!meetingCode) {
-      // generate random if empty
-      const gen = Math.random().toString(36).slice(2, 9);
-      await addToUserHistory(gen);
-      navigate(`/${gen}`);
-      return;
+  const handleJoin = () => {
+    if (!meetingCode || meetingCode.trim() === "") {
+      // if empty, create random code and go
+      const code = Math.random().toString(36).slice(2, 8);
+      navigate(`/${code}`);
+    } else {
+      navigate(`/${meetingCode}`);
     }
-    await addToUserHistory(meetingCode);
-    navigate(`/${meetingCode}`);
-  }
+  };
 
   return (
-    <>
-      <div className="navBar bg-transparent flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold">Gup-Shap</h2>
-        </div>
+    <div className="page-center">
+      <div className="home-grid">
+        <div className="home-left">
+          <h1>Providing Quality Video Calls</h1>
+          <p>Enter a meeting code or create a new one to start a call.</p>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/history")}>
-            <IconButton><RestoreIcon /></IconButton>
-            <p>History</p>
-          </div>
-          <Button onClick={() => { localStorage.removeItem("token"); navigate("/auth"); }}>
-            Logout
-          </Button>
-        </div>
-      </div>
-
-      <div className="meetContainer container mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        <div className="leftPanel">
-          <h2 className="text-3xl font-bold">Providing Quality Video Calls</h2>
-          <p className="mt-2 text-slate-300">Enter a meeting code or create a new one to start a call.</p>
-
-          <div className="mt-6 flex gap-3">
-            <TextField onChange={e => setMeetingCode(e.target.value)} id="outlined-basic" label="Meeting Code" variant="outlined" />
-            <Button onClick={handleJoinVideoCall} variant='contained'>Join</Button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
+            <input
+              className="input meeting-code-input"
+              placeholder="Meeting Code"
+              value={meetingCode}
+              onChange={(e) => setMeetingCode(e.target.value)}
+            />
+            <button className="btn primary" onClick={handleJoin}>
+              JOIN
+            </button>
           </div>
         </div>
 
-        <div className='rightPanel flex items-center justify-center'>
-          <img src="/logo3.png" alt="logo" className="max-w-xs" />
+        <div className="home-right">
+          <img src="/mobile.png" alt="mobile" className="illustration" />
         </div>
       </div>
-    </>
-  )
+    </div>
+  );
 }
-
-export default withAuth(HomeComponent)
