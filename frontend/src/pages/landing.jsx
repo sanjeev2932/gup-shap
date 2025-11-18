@@ -1,7 +1,6 @@
 // frontend/src/pages/landing.jsx
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "./landing.css"; // optional local css or use App.css
 
 export default function LandingPage() {
   const router = useNavigate();
