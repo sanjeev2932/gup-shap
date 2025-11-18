@@ -1,7 +1,6 @@
 // frontend/src/pages/VideoMeet.jsx
 import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
-import "./videoMeetOverrides.css"; // optional small overrides (see index.css if you don't have this)
 
 import server from "../environment";
 
