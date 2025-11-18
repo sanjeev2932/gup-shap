@@ -1,53 +1,72 @@
-/* ------------------------------- */
-/*   GLOBAL BASE STYLES            */
-/* ------------------------------- */
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body, #root {
-  height: 100%;
-}
+/* reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
 
 body {
-  background: #0f0f1a;
-  color: #e6eef8;
-  font-family: 'Inter', 'Roboto', system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
+  font-family: Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #080616;
+  color: #e6e6ee;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ------------------------------- */
-/*   LINKS                         */
-/* ------------------------------- */
+/* nav */
+.nav, .navBar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 12px 28px;
+  background: transparent;
+  color: #e6eef9;
+}
 
-a {
-  color: #72b1ff;
+/* lobby / home styling */
+.meetContainer {
+  display:flex;
+  justify-content:space-between;
+  padding: 40px 60px;
+  gap: 20px;
+}
+
+.leftPanel { max-width: 60%; color: #e6eef9; }
+.rightPanel { display:flex; align-items:center; justify-content:center; }
+
+.landing .hero {
+  display:flex;
+  justify-content:space-between;
+  padding: 80px 80px;
+  gap: 40px;
+}
+
+.accent { color: #ff9839; font-weight: 700; }
+
+.btn {
+  display:inline-block;
+  padding: 10px 16px;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 8px;
   text-decoration: none;
 }
 
-/* ------------------------------- */
-/*   MATERIAL UI FIXES             */
-/* ------------------------------- */
-
-.MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
-  border-color: rgba(255,255,255,0.06);
+/* auth page */
+.authPage { height: calc(100vh - 100px); display:flex; align-items:center; justify-content:center; }
+.authCard {
+  background: rgba(255,255,255,0.03);
+  padding: 28px;
+  border-radius: 12px;
+  width: 360px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
 }
 
-.MuiFormLabel-root {
-  color: rgba(255,255,255,0.7) !important;
-}
+.authTabs { display:flex; gap: 8px; justify-content:center; margin-bottom: 12px; }
+.tab { background: transparent; border: none; color: #cbd5e1; padding: 8px 16px; cursor: pointer; }
+.tab.active { background: #1976d2; color: #fff; border-radius: 6px; }
 
-/* ------------------------------- */
-/*   UTILITY CLASSES               */
-/* ------------------------------- */
+.field { margin-bottom: 12px; }
+.field label { display:block; margin-bottom:6px; color:#cbd5e1; }
+.field input { width:100%; padding: 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); background: transparent; color: #fff; }
 
-.center-screen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
+.btn.primary { background: #1976d2; color: #fff; padding: 10px 12px; border-radius: 8px; border:none; cursor:pointer; }
+
+.historyPage { padding: 24px; color: #e6eef9; }

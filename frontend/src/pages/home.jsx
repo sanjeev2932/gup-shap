@@ -1,46 +1,51 @@
-// frontend/src/pages/home.jsx
 import React, { useContext, useState } from "react";
+import withAuth from "../utils/withAuth";
 import { useNavigate } from "react-router-dom";
-import "../index.css"; // ensures global styles applied
+import { Button, IconButton, TextField } from "@mui/material";
+import RestoreIcon from "@mui/icons-material/Restore";
+import { AuthContext } from "../contexts/AuthContext";
+import "../index.css";
 
-export default function HomeComponent() {
-  let navigate = useNavigate();
+function Home() {
+  const navigate = useNavigate();
   const [meetingCode, setMeetingCode] = useState("");
+  const { addToUserHistory } = useContext(AuthContext);
 
-  const handleJoin = () => {
+  const handleJoinVideoCall = async () => {
     if (!meetingCode || meetingCode.trim() === "") {
-      // if empty, create random code and go
-      const code = Math.random().toString(36).slice(2, 8);
-      navigate(`/${code}`);
-    } else {
-      navigate(`/${meetingCode}`);
+      alert("Please enter meeting code (or create a new one in URL).");
+      return;
     }
+    await addToUserHistory(meetingCode);
+    navigate(`/${meetingCode}`);
   };
 
   return (
-    <div className="page-center">
-      <div className="home-grid">
-        <div className="home-left">
-          <h1>Providing Quality Video Calls</h1>
-          <p>Enter a meeting code or create a new one to start a call.</p>
+    <>
+      <div className="navBar">
+        <div className="navLeft"><h2>Gup-Shap</h2></div>
+        <div className="navRight">
+          <IconButton onClick={() => navigate("/history")} title="History"><RestoreIcon /></IconButton>
+          <Button onClick={() => { localStorage.removeItem("token"); navigate("/auth"); }}>Logout</Button>
+        </div>
+      </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
-            <input
-              className="input meeting-code-input"
-              placeholder="Meeting Code"
-              value={meetingCode}
-              onChange={(e) => setMeetingCode(e.target.value)}
-            />
-            <button className="btn primary" onClick={handleJoin}>
-              JOIN
-            </button>
+      <div className="meetContainer">
+        <div className="leftPanel">
+          <h2>Providing Quality Video Calls</h2>
+          <p>Enter a meeting code or create a new one to start a call.</p>
+          <div style={{ display: "flex", gap: 12 }}>
+            <TextField onChange={(e) => setMeetingCode(e.target.value)} id="meetingCode" label="Meeting Code" variant="outlined" size="small" />
+            <Button variant="contained" onClick={handleJoinVideoCall}>Join</Button>
           </div>
         </div>
 
-        <div className="home-right">
-          <img src="/mobile.png" alt="mobile" className="illustration" />
+        <div className="rightPanel">
+          <img src="/logo3.png" alt="logo" style={{ maxWidth: 320 }} />
         </div>
       </div>
-    </div>
+    </>
   );
 }
+
+export default withAuth(Home);

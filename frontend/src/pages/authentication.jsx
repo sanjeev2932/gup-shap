@@ -1,37 +1,38 @@
-// frontend/src/pages/authentication.jsx
 import React, { useState } from "react";
 import "../index.css";
 
 export default function Authentication() {
-  const [isSignIn, setIsSignIn] = useState(true);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  // NOTE: keep your existing auth API calls here.
   const submit = (e) => {
     e.preventDefault();
-    // keep it simple: store dummy token and go to home
-    localStorage.setItem("token", "dummy-token");
-    window.location.href = "/home";
+    alert(`(demo) ${isSignUp ? "Signing up" : "Logging in"}: ${username}`);
+    // implement call to backend register/login and save token, then redirect.
   };
 
   return (
-    <div className="page-center">
-      <div className="auth-card">
-        <div className="auth-tabs">
-          <button className={`tab ${isSignIn ? "active" : ""}`} onClick={() => setIsSignIn(true)}>SIGN IN</button>
-          <button className={`tab ${!isSignIn ? "active" : ""}`} onClick={() => setIsSignIn(false)}>SIGN UP</button>
+    <div className="authPage">
+      <form className="authCard" onSubmit={submit}>
+        <div className="authTabs">
+          <button type="button" className={`tab ${!isSignUp ? "active" : ""}`} onClick={() => setIsSignUp(false)}>SIGN IN</button>
+          <button type="button" className={`tab ${isSignUp ? "active" : ""}`} onClick={() => setIsSignUp(true)}>SIGN UP</button>
         </div>
 
-        <form onSubmit={submit} className="auth-form">
+        <div className="field">
           <label>Username *</label>
-          <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} />
+        </div>
 
+        <div className="field">
           <label>Password *</label>
-          <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
 
-          <button className="btn primary" type="submit">LOGIN</button>
-        </form>
-      </div>
+        <button className="btn primary" type="submit">LOGIN</button>
+      </form>
     </div>
   );
 }

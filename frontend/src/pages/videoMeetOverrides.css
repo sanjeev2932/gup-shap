@@ -1,18 +1,7 @@
-/* Overrides and small utilities for the VideoMeet page */
-
-/* make sure MUI outlines are visible on dark background */
-.MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
-  border-color: rgba(255,255,255,0.06) !important;
-}
-
-/* nice hidden scrollbars for chat */
-.chat-scroll {
-  overflow-y: auto;
-}
-
-/* ensure videos don't exceed container */
+/* videoMeetOverrides.css - small overrides for layout or library conflicts */
 video {
-  max-width: 100%;
-  max-height: 100%;
   background: #000;
+  border-radius: 6px;
+  max-width: 100%;
+  height: auto;
 }
