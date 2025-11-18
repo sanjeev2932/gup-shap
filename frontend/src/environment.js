@@ -1,8 +1,3 @@
-let IS_PROD = true;
-const server = IS_PROD ?
-    "https://gup-shapbackend.onrender.com" :
-
-    "http://localhost:8000"
-
-
+// frontend/src/environment.js
+const server = process.env.REACT_APP_SERVER_URL || window.location.origin;
 export default server;

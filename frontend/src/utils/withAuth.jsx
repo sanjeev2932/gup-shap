@@ -1,27 +1,12 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom"
+// frontend/src/utils/withAuth.jsx
+import React, { useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
-const withAuth = (WrappedComponent ) => {
-    const AuthComponent = (props) => {
-        const router = useNavigate();
-
-        const isAuthenticated = () => {
-            if(localStorage.getItem("token")) {
-                return true;
-            } 
-            return false;
-        }
-
-        useEffect(() => {
-            if(!isAuthenticated()) {
-                router("/auth")
-            }
-        }, [])
-
-        return <WrappedComponent {...props} />
-    }
-
-    return AuthComponent;
+export default function withAuth(Component) {
+  return function Wrapper(props) {
+    const { token } = useContext(AuthContext);
+    if (!token) return <Navigate to="/auth" replace />;
+    return <Component {...props} />;
+  };
 }
-
-export default withAuth;
