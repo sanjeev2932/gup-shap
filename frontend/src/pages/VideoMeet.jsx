@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import "../styles/videoComponent.css";
-import "../styles/videoMeetOverrides.css";  // UI FIX
+import "./videoMeetOverrides.css";
+
 
 const SIGNALING_URL = "wss://gup-shapbackend.onrender.com";
 
