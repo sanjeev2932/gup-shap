@@ -1,104 +1,96 @@
 // backend/src/controllers/socketManager.js
 import { Server } from "socket.io";
 
-let connections = {};
-let messages = {};
-let timeOnline = {};
-
-export const connectToSocket = (server) => {
+/*
+  Export a function to attach socket.io to http server:
+  const io = connectToSocket(server);
+*/
+export function connectToSocket(server) {
   const io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-      allowedHeaders: ["*"],
-      credentials: true
-    }
+    cors: { origin: "*" }
   });
 
+  // in-memory room state for lobby example: { roomId: { hostId, members: [{id, username}], pending: [{id, username}] } }
+  const roomsState = {};
+
   io.on("connection", (socket) => {
-    console.log("Socket connected:", socket.id);
+    console.log("socket connected", socket.id);
 
-    socket.on("join-call", (path) => {
-      const room = path.trim();
-      if (!connections[room]) connections[room] = [];
-      if (!connections[room].includes(socket.id)) connections[room].push(socket.id);
-
-      timeOnline[socket.id] = new Date();
-
-      // Join socket.io room for easier broadcasting (optional but useful)
-      socket.join(room);
-
-      // Notify all users in room (including the joining user)
-      // We emit user-joined to each member with (joiningSocketId, connections[room])
-      for (let i = 0; i < connections[room].length; i++) {
-        io.to(connections[room][i]).emit("user-joined", socket.id, connections[room]);
+    socket.on("join-request", ({ room, username }) => {
+      username = username || socket.id;
+      const roomState = roomsState[room] || { hostId: null, members: [], pending: [] };
+      // if no members yet, make this user host and allow join
+      if (!roomState.hostId) {
+        roomState.hostId = socket.id;
+        roomState.members.push({ id: socket.id, username });
+        roomsState[room] = roomState;
+        socket.join(room);
+        socket.emit("joined", { members: roomState.members, isHost: true });
+        io.to(room).emit("members", roomState.members);
+        return;
       }
 
-      // Send past messages (if any) to the new user
-      if (messages[room]) {
-        for (let i = 0; i < messages[room].length; i++) {
-          const msg = messages[room][i];
-          io.to(socket.id).emit("chat-message", msg.data, msg.sender, msg["socket-id-sender"]);
-        }
-      }
+      // if lobby enabled (we'll enable by default), push to pending
+      roomState.pending.push({ id: socket.id, username });
+      roomsState[room] = roomState;
+      // notify host to approve
+      io.to(roomState.hostId).emit("lobby-request", { id: socket.id, username });
+      socket.emit("lobby-wait", { hostId: roomState.hostId });
     });
 
-    socket.on("signal", (toId, message) => {
-      io.to(toId).emit("signal", socket.id, message);
+    socket.on("approve-join", ({ room, userId }) => {
+      const roomState = roomsState[room];
+      if (!roomState) return;
+      if (socket.id !== roomState.hostId) return; // only host can approve
+
+      const idx = roomState.pending.findIndex(p => p.id === userId);
+      if (idx === -1) return;
+      const approved = roomState.pending.splice(idx, 1)[0];
+      roomState.members.push(approved);
+      roomsState[room] = roomState;
+
+      // move the user into room
+      io.to(approved.id).emit("approved", { members: roomState.members, isHost: false });
+      io.to(room).emit("members", roomState.members);
     });
 
-    socket.on("chat-message", (data, sender) => {
-      // find matching room
-      const [matchingRoom, found] = Object.entries(connections).reduce(([room, isFound], [roomKey, roomValue]) => {
-        if (!isFound && roomValue.includes(socket.id)) return [roomKey, true];
-        return [room, isFound];
-      }, ['', false]);
-
-      if (found) {
-        if (!messages[matchingRoom]) messages[matchingRoom] = [];
-        messages[matchingRoom].push({ sender, data, "socket-id-sender": socket.id });
-        // broadcast
-        connections[matchingRoom].forEach((elem) => {
-          io.to(elem).emit("chat-message", data, sender, socket.id);
-        });
-      }
+    socket.on("get-members", ({ room }) => {
+      const roomState = roomsState[room] || { members: [] };
+      socket.emit("members", roomState.members);
     });
 
-    // raise-hand broadcast
-    socket.on("raise-hand", (payload) => {
-      // find room of the socket and broadcast raised-hand to others
-      for (const [room, arr] of Object.entries(connections)) {
-        if (arr.includes(socket.id)) {
-          // broadcast to room
-          arr.forEach(id => {
-            io.to(id).emit("raised-hand", { username: payload.username, socketId: socket.id });
-          });
-        }
-      }
+    // generic signaling proxy (offer/answer/candidate)
+    socket.on("signal", ({ to, type, data }) => {
+      if (!to) return;
+      io.to(to).emit("signal", { from: socket.id, type, data });
+    });
+
+    socket.on("raise-hand", ({ room, raised }) => {
+      // broadcast raise-hand to host and room
+      const roomState = roomsState[room];
+      if (!roomState) return;
+      io.to(roomState.hostId).emit("raise-hand", { from: socket.id, username: /* find name */ (roomState.members.find(m => m.id===socket.id) || {}).username || socket.id, raised });
+      io.to(room).emit("raise-hand", { from: socket.id, username: (roomState.members.find(m => m.id===socket.id) || {}).username || socket.id, raised });
     });
 
     socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.id);
-
-      for (const [room, arr] of Object.entries(JSON.parse(JSON.stringify(Object.entries(connections)))) ) {
-        const key = room;
-        const v = arr;
-        for (let a = 0; a < v.length; ++a) {
-          if (v[a] === socket.id) {
-            // notify others
-            for (let j = 0; j < connections[key].length; ++j) {
-              io.to(connections[key][j]).emit('user-left', socket.id);
-            }
-            // remove from list
-            const index = connections[key].indexOf(socket.id);
-            if (index !== -1) connections[key].splice(index, 1);
-            if (connections[key].length === 0) delete connections[key];
+      // remove from roomsState
+      for (const room in roomsState) {
+        const st = roomsState[room];
+        const memIdx = st.members.findIndex(m => m.id === socket.id);
+        if (memIdx !== -1) {
+          st.members.splice(memIdx, 1);
+          // if host left, promote first member to host
+          if (st.hostId === socket.id) {
+            st.hostId = st.members.length ? st.members[0].id : null;
+            if (st.hostId) io.to(st.hostId).emit("promoted-host");
           }
+          io.to(room).emit("members", st.members);
         }
+        const pendingIdx = st.pending.findIndex(p => p.id === socket.id);
+        if (pendingIdx !== -1) st.pending.splice(pendingIdx, 1);
+        roomsState[room] = st;
       }
-
-      // cleanup timeOnline
-      if (timeOnline[socket.id]) delete timeOnline[socket.id];
     });
   });
 
