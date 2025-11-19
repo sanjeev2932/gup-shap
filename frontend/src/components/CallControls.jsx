@@ -1,6 +1,6 @@
 // frontend/src/components/CallControls.jsx
 import React from "react";
-import "../styles/videoComponent.css";
+import "../styles/callControls.css";
 
 export default function CallControls({
   micOn,
@@ -16,39 +16,25 @@ export default function CallControls({
   onApproveParticipant
 }) {
   return (
-    <div className="controls-bar">
-      <button className={`control-btn ${micOn ? "" : "off"}`} onClick={onToggleMic}>
-        {micOn ? "Mute" : "Unmute"}
-      </button>
+    <div className="controlsWrap">
+      <div className="controls">
+        <button onClick={onToggleMic} className="control-btn">{micOn ? "Mute" : "Unmute"}</button>
+        <button onClick={onToggleCam} className="control-btn">{camOn ? "Camera Off" : "Camera On"}</button>
+        <button onClick={onStartScreenShare} className="control-btn">{isSharingScreen ? "Stop Share" : "Share Screen"}</button>
+        <button onClick={onRaiseHand} className="control-btn green">Raise Hand</button>
+        <button onClick={onEndCall} className="control-btn red">End Call</button>
+      </div>
 
-      <button className={`control-btn ${camOn ? "" : "off"}`} onClick={onToggleCam}>
-        {camOn ? "Camera Off" : "Camera On"}
-      </button>
-
-      <button className="control-btn" onClick={onStartScreenShare}>
-        {isSharingScreen ? "Stop Share" : "Share Screen"}
-      </button>
-
-      <button className="control-btn end" onClick={onEndCall}>
-        End Call
-      </button>
-
-      <button className="control-btn" onClick={onRaiseHand}>
-        Raise Hand
-      </button>
-
-      {isHost && participants && participants.length > 0 && (
-        <div className="host-panel">
-          <small>Pending approvals (click to approve):</small>
-          <div className="host-requests">
-            {participants
-              .filter(p => p.id && p.pending)
-              .map(p => (
-                <button key={p.id} onClick={() => onApproveParticipant(p.id)} className="approve-btn">
-                  Approve {p.username || p.id}
-                </button>
-              ))}
-          </div>
+      {isHost && (
+        <div className="approvals">
+          <div className="approveTitle">Pending approvals (click to approve):</div>
+          {participants.filter(p => p.pending).length === 0 && <div className="noPending">None</div>}
+          {participants.filter(p => p.pending).map(p => (
+            <div className="pendingItem" key={p.id}>
+              <span>{p.username}</span>
+              <button onClick={() => onApproveParticipant(p.id)} className="approveBtn">Approve</button>
+            </div>
+          ))}
         </div>
       )}
     </div>

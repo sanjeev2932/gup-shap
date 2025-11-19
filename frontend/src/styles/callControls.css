@@ -1,37 +1,12 @@
 /* frontend/src/styles/callControls.css */
-.call-controls {
-  display:flex;
-  gap:10px;
-  align-items:center;
-  justify-content:center;
-  margin-top:12px;
-  flex-wrap:wrap;
-}
+.controlsWrap { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); width:92%; max-width:960px; display:flex; justify-content:space-between; align-items:center; gap:16px; z-index:60; }
+.controls { background:rgba(0,0,0,0.45); padding:12px; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,0.6); display:flex; gap:12px; align-items:center; }
+.control-btn { border:none; padding:10px 14px; border-radius:8px; color:#fff; background:rgba(255,255,255,0.05); cursor:pointer; font-weight:600; }
+.control-btn.green { background:#25b46e; }
+.control-btn.red { background:#ff5a6a; }
 
-.control-btn {
-  background: #1f2937;
-  color: #fff;
-  padding:10px 14px;
-  border-radius:8px;
-  border: none;
-  font-weight:600;
-  cursor:pointer;
-  box-shadow: 0 6px 18px rgba(2,6,23,0.4);
-}
-
-.control-btn.off {
-  background: #374151;
-  opacity:0.9;
-}
-
-.control-btn.sharing {
-  background: #0ea5e9;
-  color: #01253a;
-}
-
-.control-btn.raised {
-  background: #f97316;
-  color: #fff;
-}
-
-.host-actions { margin-left: 12px; color:#cbd5e1; font-size:13px; }
+.approvals { background: rgba(255,255,255,0.02); padding:10px; border-radius:10px; color:#cbd5e1; min-width:220px; }
+.approveTitle { font-size:12px; color:#94a3b8; margin-bottom:8px; }
+.pendingItem { display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; }
+.approveBtn { background:#22c55e; border:none; padding:6px 8px; border-radius:6px; color:#071022; cursor:pointer; font-weight:700; }
+.noPending { color:#94a3b8; font-size:13px; }

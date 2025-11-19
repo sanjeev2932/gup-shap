@@ -1,432 +1,450 @@
 // frontend/src/pages/VideoMeet.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import { useParams, useNavigate } from "react-router-dom";
+import CallControls from "../components/CallControls";
+import "../styles/videoComponent.css";
+import "../styles/videoMeetOverrides.css";
 
-/*
-  Full VideoMeet component:
-  - Uses socket.io to talk to your backend signaling server
-  - Handles lobby/approve flow (host approves pending users)
-  - Renders remote videos using React state (no manual DOM mutating)
-  - Single local video (no duplicate floating video bug)
-  - Mic/Cam toggles send "media-update" to server so participants see state
-  - Plays a small ring audio hosted online (no local mp3 required)
-*/
-
-const SIGNAL_SERVER = "https://gup-shapbackend.onrender.com"; // adjust if needed
-const RING_AUDIO_URL = "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"; // safe hosted ring
+const SIGNAL_SERVER = "https://gup-shapbackend.onrender.com";
 
 export default function VideoMeet() {
-  const { roomId: paramRoom } = useParams();
-  const navigate = useNavigate();
-
-  const localVideoRef = useRef(null);
-  const socketRef = useRef(null);
-  const pcsRef = useRef({}); // peerId -> RTCPeerConnection
+  const localRef = useRef();
+  const peersRef = useRef({});
+  const socketRef = useRef();
   const localStreamRef = useRef(null);
 
-  const [roomId] = useState(paramRoom || "lobby");
-  const [participants, setParticipants] = useState([]); // list { id, username, mic, cam }
-  const [pending, setPending] = useState([]); // for host
-  const [isHost, setIsHost] = useState(false);
-
+  const [roomId, setRoomId] = useState("");
+  const [participants, setParticipants] = useState([]);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
-  const [sharing, setSharing] = useState(false);
-  const ringRef = useRef(null);
+  const [isSharingScreen, setIsSharingScreen] = useState(false);
+  const [isHost, setIsHost] = useState(false);
+  const [toast, setToast] = useState("");
 
-  // map remote streams by id -> MediaStream
-  const [remoteStreams, setRemoteStreams] = useState({});
+  const audioCtxRef = useRef(null);
 
+  // ----------------------------------------------------
+  // SMALL SINGLE "DING" (0.12 sec)
+  // ----------------------------------------------------
+  function playDing() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // clean ding tone
+
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+
+      // fade-out very quickly
+      gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+
+      setTimeout(() => {
+        try {
+          osc.stop();
+          ctx.close();
+        } catch {}
+      }, 150);
+    } catch {}
+  }
+
+  // ----------------------------------------------------
+  // MAIN EFFECT
+  // ----------------------------------------------------
   useEffect(() => {
-    // connect socket
+    const id = window.location.pathname.replace("/", "") || "lobby";
+    setRoomId(id);
+
     socketRef.current = io(SIGNAL_SERVER, { transports: ["websocket"] });
 
     socketRef.current.on("connect", () => {
-      const username = localStorage?.user ? JSON.parse(localStorage.user).name : "Guest";
-      socketRef.current.emit("join-request", { room: roomId, username });
+      const username = localStorage?.user
+        ? JSON.parse(localStorage.user).name
+        : "Guest";
+      socketRef.current.emit("join-request", { room: id, username });
     });
 
     socketRef.current.on("joined", async (payload) => {
-      setIsHost(Boolean(payload.isHost));
       setParticipants(payload.members || []);
-      await startLocal();
+      setIsHost(Boolean(payload.isHost));
+
+      await startLocalMedia(payload.members || []);
+      showToast("You joined the room");
+    });
+
+    socketRef.current.on("lobby-wait", () => {
+      showToast("Waiting for host approval...");
     });
 
     socketRef.current.on("approved", async (payload) => {
-      // we were approved (for pending)
       setParticipants(payload.members || []);
-      await startLocal();
+      await startLocalMedia(payload.members || []);
+      showToast("Approved — you are in!");
     });
 
     socketRef.current.on("members", (m) => {
       setParticipants(m || []);
     });
 
-    socketRef.current.on("lobby-request", (req) => {
-      // host gets a pending request
-      setPending(prev => {
-        const exists = prev.find(x => x.id === req.id);
-        if (exists) return prev;
-        return [...prev, req];
-      });
-    });
-
-    socketRef.current.on("user-joined", ({ id, username }) => {
-      // play ring and refresh members (server should emit members)
-      playRing();
-      socketRef.current.emit("get-members", { room: roomId });
-    });
-
-    socketRef.current.on("user-left", ({ id }) => {
-      // cleanup peer and stream
-      removePeer(id);
+    // 🔔 When new user joins → one clean ding
+    socketRef.current.on("user-joined", ({ username }) => {
+      playDing(); // <--- here
+      showToast(`${username || "User"} joined`);
+      socketRef.current.emit("get-members", { room: id });
     });
 
     socketRef.current.on("signal", async ({ from, type, data }) => {
-      // handle signaling
-      if (type === "offer") {
-        await handleOffer(from, data);
-      } else if (type === "answer") {
-        const pc = pcsRef.current[from];
-        if (pc && data) await pc.setRemoteDescription(new RTCSessionDescription(data));
+      if (type === "offer") await handleOffer(from, data);
+      else if (type === "answer") {
+        const pc = peersRef.current[from];
+        if (pc)
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
       } else if (type === "candidate") {
-        const pc = pcsRef.current[from];
-        if (pc && data) {
-          try { await pc.addIceCandidate(data); } catch (e) { console.warn("candidate add failed", e); }
-        }
+        const pc = peersRef.current[from];
+        if (pc) try { await pc.addIceCandidate(data); } catch {}
       }
     });
 
     socketRef.current.on("raise-hand", ({ from, username }) => {
-      // simple toast using alert for now (you can replace with nicer UI)
-      if (!isHost && from !== socketRef.current.id) {
-        // anyone can see raise-hand toast
-        console.info(`${username || from} raised their hand`);
-      }
+      showToast(`${username || from} raised hand`);
+
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === from ? { ...p, raised: true } : p
+        )
+      );
+
+      setTimeout(() => {
+        setParticipants((prev) =>
+          prev.map((p) =>
+            p.id === from ? { ...p, raised: false } : p
+          )
+        );
+      }, 6000);
     });
 
-    // cleanup on unmount
-    return () => {
-      cleanupEverything();
-    };
+    socketRef.current.on("user-left", ({ id: leftId }) => {
+      const pc = peersRef.current[leftId];
+      if (pc) {
+        try {
+          pc.close();
+        } catch {}
+        delete peersRef.current[leftId];
+      }
+
+      setParticipants((prev) => prev.filter((p) => p.id !== leftId));
+
+      const el = document.querySelector(`[data-peer="${leftId}"]`);
+      if (el && el.parentNode) el.parentNode.remove();
+    });
+
+    return () => cleanup();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // start local media (camera + mic)
-  const startLocal = async () => {
-    if (localStreamRef.current) return;
-
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: camOn, audio: micOn });
-      localStreamRef.current = s;
-      if (localVideoRef.current) localVideoRef.current.srcObject = s;
-
-      // once we have local stream, create offers for existing participants
-      // request current members list (server should have emitted 'members' earlier)
-      socketRef.current.emit("get-members", { room: roomId });
-    } catch (e) {
-      console.error("getUserMedia failed", e);
-      alert("Camera / microphone access is required for calls.");
+  // ----------------------------------------------------
+  // LOCAL MEDIA
+  // ----------------------------------------------------
+  async function startLocalMedia(existingMembers = []) {
+    if (!localStreamRef.current) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: camOn,
+          audio: micOn,
+        });
+        localStreamRef.current = stream;
+        if (localRef.current) localRef.current.srcObject = stream;
+      } catch (e) {
+        showToast("Camera/Mic permission denied");
+        return;
+      }
     }
-  };
 
-  // create peer connection and offer to remoteId
-  const createAndOffer = async (remoteId) => {
-    if (!localStreamRef.current) await startLocal();
+    // create offers to existing users
+    for (const m of existingMembers) {
+      if (m.id !== socketRef.current.id) {
+        await createPeerAndOffer(m.id);
+      }
+    }
+  }
 
-    if (pcsRef.current[remoteId]) return;
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+  // ----------------------------------------------------
+  // PEER CREATION
+  // ----------------------------------------------------
+  async function createPeerAndOffer(remoteId) {
+    if (peersRef.current[remoteId]) return;
 
-    // add local tracks
-    localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+
+    peersRef.current[remoteId] = pc;
+
+    localStreamRef.current?.getTracks().forEach((track) =>
+      pc.addTrack(track, localStreamRef.current)
+    );
 
     pc.onicecandidate = (e) => {
-      if (e.candidate) socketRef.current.emit("signal", { to: remoteId, type: "candidate", data: e.candidate });
+      if (e.candidate) {
+        socketRef.current.emit("signal", {
+          to: remoteId,
+          type: "candidate",
+          data: e.candidate,
+        });
+      }
     };
 
-    pc.ontrack = (e) => {
-      // remote stream received
-      setRemoteStreams(prev => ({ ...prev, [remoteId]: e.streams[0] }));
-    };
+    pc.ontrack = (e) => attachRemoteStream(remoteId, e.streams[0]);
 
-    pcsRef.current[remoteId] = pc;
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
 
-    try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socketRef.current.emit("signal", { to: remoteId, type: "offer", data: offer });
-    } catch (err) {
-      console.error("create offer error", err);
-    }
-  };
+    socketRef.current.emit("signal", {
+      to: remoteId,
+      type: "offer",
+      data: offer,
+    });
+  }
 
-  // handle incoming offer, reply with answer
-  const handleOffer = async (from, offer) => {
-    if (!localStreamRef.current) await startLocal();
+  async function handleOffer(from, offer) {
+    let pc = peersRef.current[from];
 
-    let pc = pcsRef.current[from];
     if (!pc) {
-      pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
 
-      localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
+      peersRef.current[from] = pc;
+
+      localStreamRef.current?.getTracks().forEach((track) =>
+        pc.addTrack(track, localStreamRef.current)
+      );
 
       pc.onicecandidate = (e) => {
-        if (e.candidate) socketRef.current.emit("signal", { to: from, type: "candidate", data: e.candidate });
+        if (e.candidate)
+          socketRef.current.emit("signal", {
+            to: from,
+            type: "candidate",
+            data: e.candidate,
+          });
       };
 
-      pc.ontrack = (e) => {
-        setRemoteStreams(prev => ({ ...prev, [from]: e.streams[0] }));
-      };
-
-      pcsRef.current[from] = pc;
+      pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
     }
 
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
-  };
 
-  // when participants state updates, create offers to newly joined users (if we are already active)
-  useEffect(() => {
-    if (!socketRef.current || !localStreamRef.current) return;
-
-    const meId = socketRef.current.id;
-    participants.forEach(m => {
-      if (m.id === meId) return;
-      // if no pc yet, create and offer
-      if (!pcsRef.current[m.id]) createAndOffer(m.id);
+    socketRef.current.emit("signal", {
+      to: from,
+      type: "answer",
+      data: answer,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [participants]);
+  }
 
-  // remove a peer and its stream
-  const removePeer = (peerId) => {
-    if (pcsRef.current[peerId]) {
-      try { pcsRef.current[peerId].close(); } catch (e) {}
-      delete pcsRef.current[peerId];
+  // ----------------------------------------------------
+  // REMOTE STREAM
+  // ----------------------------------------------------
+  function attachRemoteStream(peerId, stream) {
+    setParticipants((prev) => {
+      if (!prev.find((p) => p.id === peerId)) {
+        return [...prev, { id: peerId, username: peerId }];
+      }
+      return prev;
+    });
+
+    const grid = document.getElementById("remote-videos");
+    if (!grid) return;
+
+    let tile = grid.querySelector(`[data-wrap="${peerId}"]`);
+    if (!tile) {
+      tile = document.createElement("div");
+      tile.className = "participantTile";
+      tile.setAttribute("data-wrap", peerId);
+
+      const v = document.createElement("video");
+      v.autoplay = true;
+      v.playsInline = true;
+      v.className = "remoteVideoEl";
+      v.setAttribute("data-peer", peerId);
+
+      const lbl = document.createElement("div");
+      lbl.className = "tileLabel";
+      lbl.innerText = peerId;
+
+      const raised = document.createElement("div");
+      raised.className = "raisedBadge";
+      raised.innerText = "✋";
+      raised.style.display = "none";
+
+      tile.appendChild(v);
+      tile.appendChild(lbl);
+      tile.appendChild(raised);
+      grid.appendChild(tile);
     }
-    setRemoteStreams(prev => {
-      const copy = { ...prev };
-      delete copy[peerId];
-      return copy;
-    });
-    setParticipants(prev => prev.filter(p => p.id !== peerId));
-    setPending(prev => prev.filter(x => x.id !== peerId));
-  };
 
-  // cleanup everything on leave/unmount
-  const cleanupEverything = () => {
-    try { socketRef.current?.disconnect(); } catch (e) {}
+    const vid = tile.querySelector("video");
     try {
-      localStreamRef.current?.getTracks().forEach(t => t.stop());
-    } catch (e) {}
-    Object.values(pcsRef.current).forEach(pc => { try { pc.close(); } catch (e) {} });
-    pcsRef.current = {};
-    localStreamRef.current = null;
-    setRemoteStreams({});
-    setParticipants([]);
-    setPending([]);
-  };
+      vid.srcObject = stream;
+    } catch {
+      vid.src = URL.createObjectURL(stream);
+    }
+  }
 
-  // toggle mic and notify server
+  // ----------------------------------------------------
+  // TOAST
+  // ----------------------------------------------------
+  function showToast(msg, t = 3000) {
+    setToast(msg);
+    setTimeout(() => setToast(""), t);
+  }
+
+  // ----------------------------------------------------
+  // CONTROLS
+  // ----------------------------------------------------
   const toggleMic = () => {
     if (!localStreamRef.current) return;
-    const tracks = localStreamRef.current.getAudioTracks();
-    if (!tracks.length) return;
-    tracks.forEach(t => t.enabled = !t.enabled);
-    const enabled = tracks[0].enabled;
-    setMicOn(enabled);
-    socketRef.current.emit("media-update", { room: roomId, mic: enabled, cam: camOn });
+    const tr = localStreamRef.current.getAudioTracks();
+    if (!tr.length) return;
+
+    tr.forEach((t) => (t.enabled = !t.enabled));
+    setMicOn(tr[0].enabled);
   };
 
-  // toggle camera and notify server
   const toggleCam = () => {
     if (!localStreamRef.current) return;
-    const tracks = localStreamRef.current.getVideoTracks();
-    if (!tracks.length) return;
-    tracks.forEach(t => t.enabled = !t.enabled);
-    const enabled = tracks[0].enabled;
-    setCamOn(enabled);
-    socketRef.current.emit("media-update", { room: roomId, mic: micOn, cam: enabled });
+    const tr = localStreamRef.current.getVideoTracks();
+    if (!tr.length) return;
+
+    tr.forEach((t) => (t.enabled = !t.enabled));
+    setCamOn(tr[0].enabled);
   };
 
-  // start screen share and replace track on all peer connections
   const startScreenShare = async () => {
-    if (!localStreamRef.current) return;
     try {
       const disp = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = disp.getVideoTracks()[0];
-      Object.values(pcsRef.current).forEach(pc => {
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-        if (sender) sender.replaceTrack(screenTrack);
+      const track = disp.getVideoTracks()[0];
+
+      Object.values(peersRef.current).forEach((pc) => {
+        const sender = pc
+          .getSenders()
+          .find((s) => s.track && s.track.kind === "video");
+        if (sender) sender.replaceTrack(track);
       });
-      // set local preview
-      if (localVideoRef.current) localVideoRef.current.srcObject = disp;
-      setSharing(true);
-      screenTrack.onended = () => {
-        // restore camera
-        if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
-        Object.values(pcsRef.current).forEach(pc => {
-          const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-          if (sender) sender.replaceTrack(localStreamRef.current.getVideoTracks()[0]);
-        });
-        setSharing(false);
+
+      localRef.current.srcObject = disp;
+      setIsSharingScreen(true);
+
+      track.onended = () => {
+        if (localStreamRef.current) {
+          localRef.current.srcObject = localStreamRef.current;
+
+          Object.values(peersRef.current).forEach((pc) => {
+            const sender = pc
+              .getSenders()
+              .find((s) => s.track && s.track.kind === "video");
+            if (sender)
+              sender.replaceTrack(localStreamRef.current.getVideoTracks()[0]);
+          });
+        }
+        setIsSharingScreen(false);
       };
-    } catch (e) {
-      console.error("Screen share failed", e);
-      alert("Screen share failed");
-    }
+    } catch (e) {}
   };
 
-  // end call (cleanup and navigate home)
   const endCall = () => {
-    cleanupEverything();
-    navigate("/");
+    cleanup();
+    window.location.href = "/";
   };
 
-  // host approves a pending user
-  const approve = (userId) => {
-    setPending(prev => prev.filter(x => x.id !== userId));
+  const raiseHand = () => {
+    socketRef.current.emit("raise-hand", { room: roomId, raised: true });
+    showToast("You raised your hand");
+  };
+
+  const approveParticipant = (userId) => {
     socketRef.current.emit("approve-join", { room: roomId, userId });
   };
 
-  // raise hand
-  const raiseHand = () => {
-    socketRef.current.emit("raise-hand", { room: roomId, raised: true });
-    alert("You raised your hand");
-  };
-
-  // play ring audio (external hosted file)
-  const playRing = () => {
+  // ----------------------------------------------------
+  // CLEANUP
+  // ----------------------------------------------------
+  function cleanup() {
     try {
-      if (!ringRef.current) {
-        ringRef.current = new Audio(RING_AUDIO_URL);
-        ringRef.current.volume = 0.6;
-      }
-      ringRef.current.play().catch(() => {});
-    } catch (e) { /* ignore */ }
-  };
+      socketRef.current.disconnect();
+    } catch {}
 
-  // render video element for a remote id
-  const RemoteVideo = ({ id, stream, username }) => {
-    const ref = useRef(null);
+    try {
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    } catch {}
 
-    useEffect(() => {
-      if (ref.current && stream) {
-        try {
-          ref.current.srcObject = stream;
-        } catch (e) {
-          ref.current.src = URL.createObjectURL(stream);
-        }
-      }
-      return () => {
-        if (ref.current) {
-          try { ref.current.srcObject = null; } catch (e) {}
-        }
-      };
-    }, [stream]);
+    Object.values(peersRef.current).forEach((pc) => {
+      try {
+        pc.close();
+      } catch {}
+    });
 
-    return (
-      <div style={{
-        width: 360, height: 260, background: "#000", borderRadius: 10, overflow: "hidden",
-        display: "flex", flexDirection: "column", alignItems: "center"
-      }}>
-        <video ref={ref} autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ padding: 6, background: "rgba(0,0,0,0.4)", color: "#fff", fontSize: 12, width: "100%", textAlign: "center" }}>
-          {username || id}
-        </div>
-      </div>
-    );
-  };
+    peersRef.current = {};
+  }
 
-  // UI layout
+  // ----------------------------------------------------
+  // RENDER
+  // ----------------------------------------------------
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#051022,#071626)", color: "#fff", padding: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div>
-          <h3 style={{ margin: 0 }}>Gup-Shap — Room: <span style={{ color: "#6cb4ff" }}>{roomId}</span></h3>
+    <div className="video-container">
+      <div className="topbar">
+        <div className="roomLabel">
+          Gup-Shap — Room: <span className="roomId">{roomId}</span>
         </div>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          {isHost && <div style={{ padding: "6px 10px", background: "#0b5c2f", borderRadius: 6 }}>Host</div>}
-          <div style={{ padding: "6px 10px", background: "#14232b", borderRadius: 6 }}>{participants.length} participants</div>
+        <div className="statusBadges">
+          {isHost && <div className="hostBadge">Host</div>}
+          <div className="countBadge">{participants.length} participants</div>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 18 }}>
-        {/* left: remote grid */}
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
-            {/* remote videos (exclude self) */}
-            {Object.entries(remoteStreams).length === 0 && (
-              <div style={{
-                width: "100%", height: 280, borderRadius: 12, background: "#07111a", display: "flex",
-                alignItems: "center", justifyContent: "center", color: "#9fb2c7"
-              }}>
-                Waiting for others to join...
-              </div>
-            )}
+      <div className="videoStage">
+        <div id="remote-videos" className="remoteGrid"></div>
 
-            {Object.entries(remoteStreams).map(([id, stream]) => {
-              const p = participants.find(x => x.id === id) || {};
-              return (
-                <RemoteVideo key={id} id={id} stream={stream} username={p.username} />
-              );
-            })}
+        <div className="localFloating">
+          <video
+            ref={localRef}
+            autoPlay
+            muted
+            playsInline
+            className="localVideo"
+          />
+          <div className="localLabel">
+            {localStorage?.user
+              ? JSON.parse(localStorage.user).name
+              : "You"}
           </div>
         </div>
-
-        {/* right: local preview + host pending list */}
-        <div style={{ width: 360 }}>
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ background: "#071422", borderRadius: 10, padding: 8 }}>
-              <video ref={localVideoRef} autoPlay muted playsInline style={{ width: "100%", height: 220, objectFit: "cover", borderRadius: 6 }} />
-              <div style={{ marginTop: 8, fontSize: 13, color: "#cce8ff" }}>
-                {localStorage?.user ? JSON.parse(localStorage.user).name : "You"}
-              </div>
-            </div>
-          </div>
-
-          {isHost && pending.length > 0 && (
-            <div style={{ marginTop: 14, background: "#071422", padding: 10, borderRadius: 8 }}>
-              <div style={{ color: "#9fb2c7", marginBottom: 8 }}>Pending approvals (click to approve)</div>
-              {pending.map(req => (
-                <div key={req.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <div style={{ color: "#fff" }}>{req.username || req.id}</div>
-                  <button onClick={() => approve(req.id)} style={{ background: "#1b7bff", border: "none", padding: "6px 10px", borderRadius: 6, color: "#fff" }}>
-                    Approve
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* bottom controls */}
-      <div style={{
-        position: "fixed", left: "50%", transform: "translateX(-50%)",
-        bottom: 20, background: "rgba(7,16,24,0.8)", padding: 12, borderRadius: 12, display: "flex", gap: 12
-      }}>
-        <button onClick={toggleMic} style={controlBtnStyle}>{micOn ? "Mute" : "Unmute"}</button>
-        <button onClick={toggleCam} style={controlBtnStyle}>{camOn ? "Camera Off" : "Camera On"}</button>
-        <button onClick={startScreenShare} style={controlBtnStyle}>Share Screen</button>
-        <button onClick={raiseHand} style={{ ...controlBtnStyle, background: "#2f8a2f" }}>Raise Hand</button>
-        <button onClick={endCall} style={{ ...controlBtnStyle, background: "#ff5b5b" }}>End Call</button>
-      </div>
+      <CallControls
+        micOn={micOn}
+        camOn={camOn}
+        isSharingScreen={isSharingScreen}
+        onToggleMic={toggleMic}
+        onToggleCam={toggleCam}
+        onStartScreenShare={startScreenShare}
+        onEndCall={endCall}
+        onRaiseHand={raiseHand}
+        isHost={isHost}
+        participants={participants}
+        onApproveParticipant={approveParticipant}
+      />
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
-
-// simple button style
-const controlBtnStyle = {
-  border: "none",
-  padding: "10px 14px",
-  borderRadius: 8,
-  background: "#142a3a",
-  color: "#eaf6ff",
-  cursor: "pointer",
-  fontWeight: 600
-};
