@@ -1,80 +1,30 @@
-.auth-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background: linear-gradient(180deg, #0a1324, #0d152f);
-  font-family: Inter, system-ui;
+/* frontend/src/styles/auth.css */
+.auth-container{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(180deg,#071427,#051724);
+  padding:24px;
+  color:#eef6ff;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
 }
 
-.auth-box {
-  width: 380px;
-  padding: 28px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.auth-box{
+  width:360px;
+  background: rgba(255,255,255,0.03);
+  padding:20px;
+  border-radius:10px;
+  box-shadow: 0 8px 30px rgba(2,6,23,0.6);
 }
 
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
+.auth-tabs{ display:flex; gap:8px; margin-bottom:12px; }
+.auth-tabs button{ flex:1; padding:8px 10px; border-radius:8px; border:none; cursor:pointer; background:transparent; color:#cfe6ff;}
+.auth-tabs .active{ background:linear-gradient(90deg,#ff8a3d,#ffb36b); color:#071427; font-weight:600; }
 
-.tabs button {
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  background: #2b324d;
-  color: #d5d8e1;
-  transition: 0.3s;
-}
+label{ display:block; margin:8px 0 4px; color:#c6d6e6; font-size:13px; }
+input{ width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.01); color:#fff; }
 
-.tabs .active {
-  background: #ff8a3d;
-  color: white;
-}
+.auth-btn{ margin-top:14px; width:100%; padding:10px; border-radius:8px; border:none; cursor:pointer; background: linear-gradient(90deg,#ff8a3d,#ffb36b); color:#071427; font-weight:600; }
 
-label {
-  display: block;
-  font-size: 14px;
-  margin-top: 12px;
-  color: #d7dae5;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  margin-top: 6px;
-  border-radius: 8px;
-  border: none;
-  background: #10182f;
-  color: #fff;
-}
-
-.btn {
-  width: 100%;
-  margin-top: 22px;
-  padding: 12px;
-  background: #2563eb;
-  color: white;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  transition: 0.3s;
-}
-
-.btn:hover {
-  background: #1e4fcf;
-}
-
-.error {
-  color: #ff6b6b;
-  margin-top: 10px;
-  font-size: 14px;
-}
+.auth-error{ margin-top:8px; color:#ffb4b4; background: rgba(255,255,255,0.02); padding:8px; border-radius:6px; font-size:13px; }

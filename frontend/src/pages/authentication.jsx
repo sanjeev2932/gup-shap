@@ -1,3 +1,4 @@
+// frontend/src/pages/authentication.jsx
 import React, { useState } from "react";
 import "../styles/auth.css";
 import { post } from "../utils/api";
@@ -11,86 +12,50 @@ const Authentication = () => {
 
   const handleSubmit = async () => {
     setError("");
-
     if (!username || !password || (!isLogin && !name)) {
       setError("Please fill required fields.");
       return;
     }
 
     const data = { name, username, password };
+    const url = isLogin ? "/api/v1/users/login" : "/api/v1/users/register";
 
-    // 🔥 FIX: Correct backend endpoints
-    const url = isLogin
-      ? "/api/v1/users/login"
-      : "/api/v1/users/register";
-
-    try {
-      const res = await post(url, data);
-
-      if (!res || res.success === false) {
-        setError(res?.message || "Authentication failed");
-        return;
-      }
-
-      // Save token and user
-      if (res.token) localStorage.setItem("token", res.token);
-      if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
-
-      window.location.href = "/home";
-    } catch (err) {
-      setError("Server error. Try again.");
+    const res = await post(url, data);
+    if (!res || res.success === false) {
+      setError(res?.message || "Authentication failed");
+      return;
     }
+
+    if (res.token) localStorage.setItem("token", res.token);
+    if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
+    // redirect
+    window.location.href = "/home";
   };
 
   return (
     <div className="auth-container">
       <div className="auth-box">
-        <div className="tabs">
-          <button
-            className={isLogin ? "active" : ""}
-            onClick={() => setIsLogin(true)}
-          >
-            SIGN IN
-          </button>
-          <button
-            className={!isLogin ? "active" : ""}
-            onClick={() => setIsLogin(false)}
-          >
-            SIGN UP
-          </button>
+        <div className="auth-tabs">
+          <button className={isLogin ? "active" : ""} onClick={() => setIsLogin(true)}>SIGN IN</button>
+          <button className={!isLogin ? "active" : ""} onClick={() => setIsLogin(false)}>SIGN UP</button>
         </div>
 
         {!isLogin && (
           <>
-            <label>Name *</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
-            />
+            <label>Name</label>
+            <input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} />
           </>
         )}
 
-        <label>Username *</label>
-        <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Enter username"
-        />
+        <label>Username</label>
+        <input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
 
-        <label>Password *</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter password"
-        />
+        <label>Password</label>
+        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
 
-        {error && <p className="error">{error}</p>}
+        {error && <div className="auth-error">{error}</div>}
 
-        <button className="btn" onClick={handleSubmit}>
-          {isLogin ? "LOGIN" : "REGISTER"}
-        </button>
+        <button className="auth-btn" onClick={handleSubmit}>{isLogin ? "LOGIN" : "REGISTER"}</button>
       </div>
     </div>
   );
