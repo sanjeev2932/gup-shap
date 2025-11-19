@@ -1,20 +1,25 @@
 // frontend/src/App.js
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import Authentication from "./pages/Authentication";
-import JoinExisting from "./pages/JoinExisting";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+import Landing from "./pages/landing";
+import Authentication from "./pages/authentication";
+import Home from "./pages/home";
+import JoinExisting from "./pages/joinExisting";
 import VideoMeet from "./pages/VideoMeet";
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Authentication />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/join" element={<JoinExisting />} />
         <Route path="/:roomId" element={<VideoMeet />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;
