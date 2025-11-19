@@ -1,7 +1,36 @@
-/* videoMeetOverrides.css - small overrides for layout or library conflicts */
+/* Global video styling */
 video {
   background: #000;
-  border-radius: 6px;
-  max-width: 100%;
+  border-radius: 10px;
+  width: 100%;
   height: auto;
+  object-fit: cover;
+}
+
+/* Fix container so it doesn't leave huge empty space */
+.video-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 40px;
+}
+
+/* When multiple videos */
+.video-grid {
+  display: grid;
+  gap: 20px;
+  justify-content: center;
+}
+
+.video-grid.single {
+  grid-template-columns: 1fr;
+}
+
+.video-grid.double {
+  grid-template-columns: 1fr 1fr;
+}
+
+.video-grid.triple,
+.video-grid.four {
+  grid-template-columns: repeat(2, 1fr);
 }
