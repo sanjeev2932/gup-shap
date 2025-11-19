@@ -9,8 +9,11 @@ export async function post(url, data) {
     });
 
     const text = await res.text();
-    if (!text) return { success: false, message: "Empty response" };
-
+    if (!res.ok) {
+      // try to parse JSON error if any
+      try { return JSON.parse(text); } catch { return { success: false, message: text || "Server error" }; }
+    }
+    if (!text) return { success: true };
     return JSON.parse(text);
   } catch (err) {
     return { success: false, message: "Network error" };

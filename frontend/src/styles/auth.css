@@ -1,76 +1,53 @@
 .auth-container {
   width: 100%;
   height: 100vh;
-  background: #f9f9f9;
   display: flex;
   justify-content: center;
   align-items: center;
+  background: linear-gradient(180deg,#0f1724 0%, #07102b 100%);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
 .auth-box {
   width: 420px;
-  padding: 30px;
+  padding: 28px;
   border-radius: 12px;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.04);
+  box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+  color: #ffffff;
 }
 
 .tabs {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
 .tabs button {
   flex: 1;
-  padding: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
   border: none;
-  background: #eaeaea;
-  cursor: pointer;
-  font-size: 14px;
+  background: rgba(255,255,255,0.06);
+  color: #cbd5e1;
   font-weight: 600;
+  cursor: pointer;
 }
 
 .tabs button.active {
-  background: #2a72ff;
-  color: white;
+  background: #ff8a3d;
+  color: #fff;
 }
 
-label {
-  display: block;
-  margin-top: 15px;
-  font-weight: 600;
-  color: #444;
-}
-
+label { display:block; margin-top:12px; color:#e6eef8; font-weight:600; font-size:13px; }
 input {
-  width: 100%;
-  padding: 12px;
-  margin-top: 6px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 15px;
+  width:100%;
+  padding:10px 12px;
+  margin-top:8px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  color: #fff;
 }
-
-.btn {
-  width: 100%;
-  margin-top: 20px;
-  padding: 12px;
-  background: #2a72ff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: 0.2s;
-}
-
-.btn:hover {
-  background: #1b5bd9;
-}
-
-.error {
-  margin-top: 10px;
-  color: red;
-  font-size: 14px;
-}
+.btn { margin-top:18px; width:100%; padding:12px; border-radius:8px; border:none; cursor:pointer; background:#ff8a3d; color:#fff; font-weight:700; }
+.error { color:#ff7b7b; margin-top:10px; font-size:14px; }
