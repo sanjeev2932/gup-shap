@@ -1,36 +1,22 @@
-/* Global video styling */
-video {
-  background: #000;
-  border-radius: 10px;
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-}
-
-/* Fix container so it doesn't leave huge empty space */
-.video-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 40px;
-}
-
-/* When multiple videos */
+/* Self & remote video containers */
 .video-grid {
-  display: grid;
+  display: flex;
   gap: 20px;
   justify-content: center;
+  flex-wrap: wrap;
+  padding-top: 20px;
 }
 
-.video-grid.single {
-  grid-template-columns: 1fr;
+/* Each video frame */
+.video-frame {
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.video-grid.double {
-  grid-template-columns: 1fr 1fr;
-}
-
-.video-grid.triple,
-.video-grid.four {
-  grid-template-columns: repeat(2, 1fr);
+video {
+  width: 400px;
+  height: 280px;
+  object-fit: cover;
+  border-radius: 10px;
 }

@@ -1,53 +1,80 @@
 .auth-container {
-  width: 100%;
-  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(180deg,#0f1724 0%, #07102b 100%);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  height: 100vh;
+  background: linear-gradient(180deg, #0a1324, #0d152f);
+  font-family: Inter, system-ui;
 }
 
 .auth-box {
-  width: 420px;
+  width: 380px;
   padding: 28px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-  box-shadow: 0 8px 30px rgba(2,6,23,0.6);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
 .tabs button {
   flex: 1;
-  padding: 10px 12px;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background: #2b324d;
+  color: #d5d8e1;
+  transition: 0.3s;
+}
+
+.tabs .active {
+  background: #ff8a3d;
+  color: white;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  margin-top: 12px;
+  color: #d7dae5;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
   border-radius: 8px;
   border: none;
-  background: rgba(255,255,255,0.06);
-  color: #cbd5e1;
-  font-weight: 600;
+  background: #10182f;
+  color: #fff;
+}
+
+.btn {
+  width: 100%;
+  margin-top: 22px;
+  padding: 12px;
+  background: #2563eb;
+  color: white;
+  border-radius: 8px;
+  border: none;
   cursor: pointer;
+  font-size: 16px;
+  transition: 0.3s;
 }
 
-.tabs button.active {
-  background: #ff8a3d;
-  color: #fff;
+.btn:hover {
+  background: #1e4fcf;
 }
 
-label { display:block; margin-top:12px; color:#e6eef8; font-weight:600; font-size:13px; }
-input {
-  width:100%;
-  padding:10px 12px;
-  margin-top:8px;
-  border-radius:8px;
-  border:1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
-  color: #fff;
+.error {
+  color: #ff6b6b;
+  margin-top: 10px;
+  font-size: 14px;
 }
-.btn { margin-top:18px; width:100%; padding:12px; border-radius:8px; border:none; cursor:pointer; background:#ff8a3d; color:#fff; font-weight:700; }
-.error { color:#ff7b7b; margin-top:10px; font-size:14px; }
