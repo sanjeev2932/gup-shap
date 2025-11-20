@@ -1,6 +1,7 @@
 // frontend/src/utils/api.js
 
-const API_BASE = "https://gup-shapbackend.onrender.com";
+const API_BASE = "https://gup-shapbackend.onrender.com/api/auth";
+
 
 // ===== FIXED safeParse =====
 async function safeParse(res) {
