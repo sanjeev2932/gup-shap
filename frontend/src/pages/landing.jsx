@@ -66,7 +66,11 @@ export default function Landing() {
         </div>
 
         {/* RIGHT ILLUSTRATION */}
-        
+        <img
+  src="/hero-phones.png"
+  alt="illustration"
+  className="heroIllustration"
+/>
       </section>
 
       {/* BACKGROUND SHAPES */}
