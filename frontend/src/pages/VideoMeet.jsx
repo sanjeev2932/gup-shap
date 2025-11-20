@@ -21,9 +21,7 @@ export default function VideoMeet() {
   const [isHost, setIsHost] = useState(false);
   const [toast, setToast] = useState("");
 
-  // ----------------------------------------------------
-  // SOUND DING
-  // ----------------------------------------------------
+  // --------------------- tiny ding ---------------------
   function playDing() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -37,15 +35,11 @@ export default function VideoMeet() {
       gain.connect(ctx.destination);
       osc.start();
       gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
-      setTimeout(() => {
-        try { osc.stop(); ctx.close(); } catch {}
-      }, 150);
+      setTimeout(() => { try { osc.stop(); ctx.close(); } catch {} }, 150);
     } catch {}
   }
 
-  // ----------------------------------------------------
-  // MAIN EFFECT
-  // ----------------------------------------------------
+  // --------------------- main effect ---------------------
   useEffect(() => {
     const id = window.location.pathname.replace("/", "") || "lobby";
     setRoomId(id);
@@ -57,7 +51,6 @@ export default function VideoMeet() {
       socketRef.current.emit("join-request", { room: id, username });
     });
 
-    // standard join/approval/members flows
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
       setIsHost(Boolean(payload.isHost));
@@ -75,40 +68,38 @@ export default function VideoMeet() {
       showToast("Approved — you are in!");
     });
 
+    // members snapshot updates
     socketRef.current.on("members", (m) => {
-      // replace participants array — keep pending flags in sync
       setParticipants((prev) => {
-        // preserve any pending flags for those ids that still exist
+        // preserve pending flags for entries that were pending
         const pendingMap = {};
         prev.forEach(p => { if (p.pending) pendingMap[p.id] = true; });
         const newMembers = (m || []).map(x => ({ ...x, pending: false }));
-        // reapply pending if id still there and was pending
         return newMembers.map(n => ({ ...n, pending: pendingMap[n.id] || false }));
       });
     });
 
-    // When new user joins who is already approved
     socketRef.current.on("user-joined", ({ username }) => {
       playDing();
       showToast(`${username || "User"} joined`);
       socketRef.current.emit("get-members", { room: id });
     });
 
-    // NEW: host receives a lobby request
+    // <-- CRITICAL: host receives lobby request here
     socketRef.current.on("lobby-request", ({ id: reqId, username }) => {
-      // Add pending entry only if not already present
       setParticipants(prev => {
         const exists = prev.find(p => p.id === reqId);
         if (exists) {
-          // if exists but not pending, mark pending
-          return prev.map(p => p.id === reqId ? { ...p, pending: true } : p);
+          // mark existing entry as pending
+          return prev.map(p => (p.id === reqId ? { ...p, pending: true } : p));
         }
+        // append pending request
         return [...prev, { id: reqId, username, pending: true }];
       });
       showToast(`${username || reqId} requested to join`);
     });
 
-    // signaling & ice
+    // signaling
     socketRef.current.on("signal", async ({ from, type, data }) => {
       if (type === "offer") await handleOffer(from, data);
       else if (type === "answer") {
@@ -143,13 +134,10 @@ export default function VideoMeet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ----------------------------------------------------
-  // LOCAL MEDIA
-  // ----------------------------------------------------
+  // --------------------- local media ---------------------
   async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       try {
-        // ALWAYS ask both audio/video to trigger permission dialog on browsers
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStreamRef.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
@@ -159,7 +147,6 @@ export default function VideoMeet() {
       }
     }
 
-    // create offers to existing users
     for (const m of existingMembers) {
       if (m.id !== socketRef.current.id) {
         await createPeerAndOffer(m.id);
@@ -167,21 +154,18 @@ export default function VideoMeet() {
     }
   }
 
-  // ----------------------------------------------------
-  // PEER CREATION
-  // ----------------------------------------------------
+  // --------------------- peers ---------------------
   async function createPeerAndOffer(remoteId) {
     if (peersRef.current[remoteId]) return;
 
     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
     peersRef.current[remoteId] = pc;
 
+    // add tracks
     localStreamRef.current?.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
 
     pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        socketRef.current.emit("signal", { to: remoteId, type: "candidate", data: e.candidate });
-      }
+      if (e.candidate) socketRef.current.emit("signal", { to: remoteId, type: "candidate", data: e.candidate });
     };
 
     pc.ontrack = (e) => attachRemoteStream(remoteId, e.streams[0]);
@@ -198,9 +182,7 @@ export default function VideoMeet() {
       pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
       peersRef.current[from] = pc;
       localStreamRef.current?.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
-      pc.onicecandidate = (e) => {
-        if (e.candidate) socketRef.current.emit("signal", { to: from, type: "candidate", data: e.candidate });
-      };
+      pc.onicecandidate = (e) => { if (e.candidate) socketRef.current.emit("signal", { to: from, type: "candidate", data: e.candidate }); };
       pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
     }
 
@@ -210,9 +192,7 @@ export default function VideoMeet() {
     socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
   }
 
-  // ----------------------------------------------------
-  // REMOTE STREAM
-  // ----------------------------------------------------
+  // --------------------- remote stream ---------------------
   function attachRemoteStream(peerId, stream) {
     setParticipants((prev) => {
       if (!prev.find((p) => p.id === peerId)) {
@@ -259,24 +239,19 @@ export default function VideoMeet() {
     }
   }
 
-  // ----------------------------------------------------
-  // TOAST
-  // ----------------------------------------------------
+  // --------------------- toast ---------------------
   function showToast(msg, t = 3000) {
     setToast(msg);
     setTimeout(() => setToast(""), t);
   }
 
-  // ----------------------------------------------------
-  // CONTROLS
-  // ----------------------------------------------------
+  // --------------------- controls ---------------------
   const toggleMic = () => {
     if (!localStreamRef.current) return;
     const tr = localStreamRef.current.getAudioTracks();
     if (!tr.length) return;
     tr.forEach((t) => (t.enabled = !t.enabled));
     setMicOn(tr[0].enabled);
-    // notify peers (optional)
     socketRef.current.emit("media-update", { room: roomId, mic: tr[0].enabled });
   };
 
@@ -289,29 +264,22 @@ export default function VideoMeet() {
     socketRef.current.emit("media-update", { room: roomId, cam: tr[0].enabled });
   };
 
-  // NEW: toggle screen share properly
   const startScreenShare = async () => {
-    if (!localStreamRef.current) {
-      showToast("Local media not started");
-      return;
-    }
+    if (!localStreamRef.current) { showToast("Local media not started"); return; }
 
     if (isSharingScreen) {
-      // STOP sharing: replace with camera track
+      // stop sharing: replace with camera track
       const camTrack = localStreamRef.current.getVideoTracks()[0];
       if (!camTrack) return;
-
       Object.values(peersRef.current).forEach((pc) => {
         const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
         if (sender) sender.replaceTrack(camTrack);
       });
-
       if (localRef.current) localRef.current.srcObject = localStreamRef.current;
       setIsSharingScreen(false);
       return;
     }
 
-    // START sharing
     try {
       const disp = await navigator.mediaDevices.getDisplayMedia({ video: true });
       const track = disp.getVideoTracks()[0];
@@ -326,7 +294,6 @@ export default function VideoMeet() {
       setIsSharingScreen(true);
 
       track.onended = () => {
-        // restore camera when screen sharing ends from browser UI
         const camTrack = localStreamRef.current?.getVideoTracks()[0];
         Object.values(peersRef.current).forEach((pc) => {
           const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
@@ -351,14 +318,13 @@ export default function VideoMeet() {
   };
 
   const approveParticipant = (userId) => {
+    // emit approve to backend (backend will emit 'approved' and updated members)
     socketRef.current.emit("approve-join", { room: roomId, userId });
-    // optimistic UI: mark approved -> remove pending flag (host clicked)
+    // optimistic UI: remove pending flag for that id
     setParticipants(prev => prev.map(p => p.id === userId ? { ...p, pending: false } : p));
   };
 
-  // ----------------------------------------------------
-  // CLEANUP
-  // ----------------------------------------------------
+  // --------------------- cleanup ---------------------
   function cleanup() {
     try { socketRef.current.disconnect(); } catch {}
     try { localStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
@@ -366,9 +332,7 @@ export default function VideoMeet() {
     peersRef.current = {};
   }
 
-  // ----------------------------------------------------
-  // RENDER
-  // ----------------------------------------------------
+  // --------------------- render ---------------------
   return (
     <div className="video-container">
       <div className="topbar">
