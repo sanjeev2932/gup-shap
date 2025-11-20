@@ -1,90 +1,113 @@
-// frontend/src/pages/authentication.jsx
 import React, { useEffect, useState } from "react";
-import "../styles/auth.css";
+import "../styles/authNew.css"; // 🔥 new modern CSS
 import { post } from "../utils/api";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const Authentication = () => {
+export default function Authentication() {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
   const navigate = useNavigate();
   const { hash } = useLocation();
 
   useEffect(() => {
-    // Support direct links: /auth#signup or /auth#signin
-    if (hash && hash.includes("signup")) setIsLogin(false);
+    if (hash.includes("signup")) setIsLogin(false);
     else setIsLogin(true);
   }, [hash]);
 
-  useEffect(() => {
-    setError("");
-  }, [isLogin, name, username, password]);
-
   const handleSubmit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setError("");
+    e.preventDefault();
+
     if (!username || !password || (!isLogin && !name)) {
-      setError("Please fill required fields.");
+      setError("Please fill all required fields.");
       return;
     }
-    const data = { name, username, password };
+
+    const payload = { name, username, password };
     const url = isLogin ? "/api/v1/users/login" : "/api/v1/users/register";
 
-    const res = await post(url, data);
-    if (!res || res.success === false) {
-      setError(res?.message || "Server error");
+    const res = await post(url, payload);
+
+    if (!res || !res.success) {
+      setError(res?.message || "Server error.");
       return;
     }
 
-    // Save token and user if backend returned
     if (res.token) localStorage.setItem("token", res.token);
     if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
-    // go to home
+
     navigate("/home");
   };
 
   return (
-    <div className="auth-container">
-      <form className="auth-box" onSubmit={handleSubmit}>
-        <div className="tabs">
+    <div className="authPage">
+      {/* Header */}
+      <header className="authHeader">
+        <h2 className="logoText">Gup-Shap</h2>
+        <button className="backBtn" onClick={() => navigate("/")}>← Back</button>
+      </header>
+
+      {/* Card */}
+      <div className="authCard">
+        <div className="authTabs">
           <button
-            type="button"
             className={isLogin ? "tab active" : "tab"}
-            onClick={() => { setIsLogin(true); window.location.hash = "signin"; }}
+            onClick={() => {
+              setIsLogin(true);
+              window.location.hash = "signin";
+            }}
           >
-            SIGN IN
+            Sign In
           </button>
+
           <button
-            type="button"
             className={!isLogin ? "tab active" : "tab"}
-            onClick={() => { setIsLogin(false); window.location.hash = "signup"; }}
+            onClick={() => {
+              setIsLogin(false);
+              window.location.hash = "signup";
+            }}
           >
-            SIGN UP
+            Sign Up
           </button>
         </div>
 
-        {!isLogin && (
-          <>
-            <label>Name *</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
-          </>
-        )}
+        <form onSubmit={handleSubmit} className="authForm">
+          {!isLogin && (
+            <>
+              <label>Name *</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+              />
+            </>
+          )}
 
-        <label>Username *</label>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter username" />
+          <label>Username *</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter username"
+          />
 
-        <label>Password *</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />
+          <label>Password *</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+          />
 
-        {error && <p className="error">{error}</p>}
+          {error && <p className="authError">{error}</p>}
 
-        <button className="btn" type="submit">{isLogin ? "LOGIN" : "REGISTER"}</button>
-      </form>
+          <button type="submit" className="authBtn">
+            {isLogin ? "Login" : "Register"}
+          </button>
+        </form>
+      </div>
     </div>
   );
-};
-
-export default Authentication;
+}

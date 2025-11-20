@@ -1,0 +1,104 @@
+/* Page Background */
+.authPage {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #eefdff, #dcefff, #cfe8ff);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Header */
+.authHeader {
+  width: 100%;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logoText {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0095ff;
+}
+
+.backBtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #e0e7ff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Card */
+.authCard {
+  margin-top: 70px;
+  background: #fff;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px;
+  border-radius: 22px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+}
+
+.authTabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.tab {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #f1f1f1;
+  margin: 0 5px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #555;
+}
+
+.tab.active {
+  background: #0095ff;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,149,255,0.4);
+}
+
+.authForm label {
+  margin-top: 12px;
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.authForm input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 13px;
+  border: 1px solid #cdd7e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.authBtn {
+  margin-top: 25px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: #0095ff;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.authError {
+  color: #ff4444;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  text-align: center;
+}

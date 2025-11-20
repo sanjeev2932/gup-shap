@@ -1,6 +1,7 @@
 // frontend/src/pages/JoinExisting.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "../styles/landing.css"; // reuse clean UI styles
 import "../styles/joinExisting.css";
 
 export default function JoinExisting() {
@@ -8,45 +9,54 @@ export default function JoinExisting() {
   const navigate = useNavigate();
 
   const joinNow = () => {
-    const id = (room || "").trim();
-    if (!id) return alert("Please enter a room ID");
-    navigate(`/${encodeURIComponent(id)}`);
+    const id = room.trim();
+    if (!id) return alert("Enter a valid meeting code.");
+    navigate(`/${id}`);
   };
 
   const generate = () => {
-    const rnd = Math.random().toString(36).slice(2, 8);
+    const rnd = Math.random().toString(36).substring(2, 9);
     setRoom(rnd);
   };
 
   return (
-    <div className="joinWrapper">
+    <div className="joinExistingContainer">
+      
+      {/* Header */}
+      <header className="joinHeader">
+        <h2 className="logoText">Gup-Shap</h2>
 
-      {/* Floating shapes */}
-      <div className="joinShape shapeA"></div>
-      <div className="joinShape shapeB"></div>
-      <div className="joinShape shapeC"></div>
+        <div className="navRight">
+          <button className="backBtn" onClick={() => navigate("/")}>
+            ← Back
+          </button>
+        </div>
+      </header>
 
+      {/* Main card */}
       <div className="joinCard">
-        <h2>Join a Meeting</h2>
-        <p className="joinDesc">
-          Enter a meeting code or generate a new one.
-        </p>
+        <h1 className="joinTitle">Join a Meeting</h1>
+        <p className="joinDesc">Enter a meeting code or generate a new one.</p>
 
         <input
+          className="meetingInput"
+          placeholder="Enter meeting code"
           value={room}
           onChange={(e) => setRoom(e.target.value)}
-          placeholder="Enter meeting code"
-          className="joinInput"
         />
 
-        <div className="joinButtons">
-          <button className="bubbleBtn primary" onClick={joinNow}>Join</button>
-          <button className="bubbleBtn outline" onClick={generate}>Generate</button>
+        <div className="actionsRow">
+          <button className="btn-primary" onClick={joinNow}>Join</button>
+          <button className="btn-secondary" onClick={generate}>Generate</button>
         </div>
 
-        <p className="tipText">
-          Share this code with the person you want to call.
-        </p>
+        {room && (
+          <p className="generatedCode">
+            Meeting Code: <span>{room}</span>
+          </p>
+        )}
+
+        <p className="tipText">Share this code with the person you want to call.</p>
       </div>
     </div>
   );

@@ -6,14 +6,14 @@ import "../styles/landing.css";
 export default function Landing() {
   const navigate = useNavigate();
 
-  function handleGetStarted() {
+  function handleStartMeeting() {
     const user = localStorage.getItem("user");
     if (user) navigate("/home");
     else navigate("/auth#signin");
   }
 
-  function handleJoinExisting() {
-    navigate("/joinExisting");
+  function handleJoin() {
+    navigate("/join");  // ✅ FIXED — correct route
   }
 
   function openAuth(tab = "signin") {
@@ -28,16 +28,19 @@ export default function Landing() {
         <div className="navLogo">Gup-Shap</div>
 
         <div className="navActions">
-          <button className="bubbleBtn white" onClick={() => openAuth("signin")}>
+          <button
+            className="bubbleBtn white"
+            onClick={() => openAuth("signin")}
+          >
             Register / Login
           </button>
         </div>
       </nav>
 
       {/* HERO SECTION */}
-      <div className="heroSection">
+      <section className="heroSection">
 
-        {/* LEFT SIDE */}
+        {/* LEFT */}
         <div className="heroLeft">
           <h1 className="heroTitle">
             <span className="colorBlue">Connect.</span>
@@ -52,17 +55,17 @@ export default function Landing() {
           </p>
 
           <div className="heroButtons">
-            <button className="bubbleBtn primary" onClick={handleGetStarted}>
+            <button className="bubbleBtn primary" onClick={handleStartMeeting}>
               Start a Meeting
             </button>
 
-            <button className="bubbleBtn outline" onClick={handleJoinExisting}>
+            <button className="bubbleBtn outline" onClick={handleJoin}>
               Join with Code
             </button>
           </div>
         </div>
 
-        {/* RIGHT SIDE ILLUSTRATION */}
+        {/* RIGHT */}
         <div className="heroRight">
           <img
             src="/hero-phones.png"
@@ -70,9 +73,9 @@ export default function Landing() {
             className="heroIllustration"
           />
         </div>
-      </div>
+      </section>
 
-      {/* FLOATING GEN-Z SHAPES */}
+      {/* FLOATING SHAPES */}
       <div className="bgShape shape1"></div>
       <div className="bgShape shape2"></div>
       <div className="bgShape shape3"></div>
