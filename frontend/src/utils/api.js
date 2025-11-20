@@ -1,20 +1,37 @@
 // frontend/src/utils/api.js
 
-const API_BASE = "https://gup-shapbackend.onrender.com";  
+const API_BASE = "https://gup-shapbackend.onrender.com";
 
+// ===== FIXED safeParse =====
 async function safeParse(res) {
   const txt = await res.text();
+
+  let json = null;
   try {
-    return JSON.parse(txt);
+    json = JSON.parse(txt);
   } catch {
-    return { success: res.ok, message: txt || "Unknown server response" };
+    return {
+      success: false,
+      message: "Invalid server response",
+      raw: txt
+    };
   }
+
+  if (json.error) {
+    return { success: false, message: json.error };
+  }
+
+  if (json.success === false) {
+    return json;
+  }
+
+  return json; // success
 }
 
+// ===== GET =====
 export async function get(url) {
   try {
     const token = localStorage.getItem("token") || "";
-
     const res = await fetch(`${API_BASE}${url}`, {
       method: "GET",
       headers: {
@@ -22,17 +39,16 @@ export async function get(url) {
         Authorization: token ? `Bearer ${token}` : "",
       },
     });
-
     return await safeParse(res);
-  } catch (err) {
+  } catch {
     return { success: false, message: "Network error" };
   }
 }
 
+// ===== POST =====
 export async function post(url, data = {}) {
   try {
     const token = localStorage.getItem("token") || "";
-
     const res = await fetch(`${API_BASE}${url}`, {
       method: "POST",
       headers: {
@@ -41,17 +57,16 @@ export async function post(url, data = {}) {
       },
       body: JSON.stringify(data),
     });
-
     return await safeParse(res);
-  } catch (err) {
+  } catch {
     return { success: false, message: "Network error" };
   }
 }
 
+// ===== PUT =====
 export async function put(url, data = {}) {
   try {
     const token = localStorage.getItem("token") || "";
-
     const res = await fetch(`${API_BASE}${url}`, {
       method: "PUT",
       headers: {
@@ -60,17 +75,16 @@ export async function put(url, data = {}) {
       },
       body: JSON.stringify(data),
     });
-
     return await safeParse(res);
-  } catch (err) {
+  } catch {
     return { success: false, message: "Network error" };
   }
 }
 
+// ===== DELETE =====
 export async function remove(url) {
   try {
     const token = localStorage.getItem("token") || "";
-
     const res = await fetch(`${API_BASE}${url}`, {
       method: "DELETE",
       headers: {
@@ -78,9 +92,8 @@ export async function remove(url) {
         Authorization: token ? `Bearer ${token}` : "",
       },
     });
-
     return await safeParse(res);
-  } catch (err) {
+  } catch {
     return { success: false, message: "Network error" };
   }
 }
