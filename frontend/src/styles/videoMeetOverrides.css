@@ -112,6 +112,31 @@
   box-shadow: 0 4px 14px rgba(10, 20, 40, 0.12);
   filter: brightness(0.92);
 }
+/* add to videoMeetOverrides.css (or videoComponent.css) */
+.participantTile {
+  border: 6px solid #ffffff; /* thick white border */
+  background: linear-gradient(180deg, #f7fbff, #eef9ff); /* light-blueish */
+  transition: transform 260ms cubic-bezier(.2,.9,.2,1), box-shadow 260ms;
+  box-shadow: 0 8px 26px rgba(10,30,60,0.06);
+}
+
+/* active tile pops forward and becomes larger */
+.participantTile.active {
+  transform: scale(1.06);
+  z-index: 30;
+  box-shadow: 0 22px 54px rgba(0,120,255,0.12);
+  border-color: rgba(0,160,255,0.12);
+}
+
+/* make screenTile span and look spotlight */
+.screenTile {
+  grid-column: 1 / -1 !important;
+  grid-row: span 2;
+  height: 72vh !important;
+  max-height: 78vh;
+  border: 6px solid #ffffff;
+  background: #000;
+}
 
 /* ----------------------------------------- */
 /* LOCAL PREVIEW OVERRIDES */

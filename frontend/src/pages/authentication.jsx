@@ -13,7 +13,6 @@ export default function Authentication() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Always run when hash changes
   useEffect(() => {
     const h = (location.hash || "").replace("#", "");
     if (h === "signup") setIsLogin(false);
@@ -29,7 +28,9 @@ export default function Authentication() {
     }
 
     const payload = { name, username, password };
-    const url = isLogin ? "/api/v1/users/login" : "/api/v1/users/register";
+
+    // ✅ FIXED URL
+    const url = isLogin ? "/users/login" : "/users/register";
 
     const res = await post(url, payload);
 
@@ -63,7 +64,6 @@ export default function Authentication() {
 
       <div className="authCard">
         <div className="authTabs">
-
           <button
             className={isLogin ? "tab active" : "tab"}
             onClick={openSignIn}
@@ -77,7 +77,6 @@ export default function Authentication() {
           >
             Sign Up
           </button>
-
         </div>
 
         <form onSubmit={handleSubmit} className="authForm">
