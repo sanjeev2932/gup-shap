@@ -13,7 +13,7 @@ export default function Authentication() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // detect #signin or #signup
+  // Detect #signin or #signup
   useEffect(() => {
     const h = (location.hash || "").replace("#", "");
     setIsLogin(h !== "signup");
@@ -21,21 +21,22 @@ export default function Authentication() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!username || !password || (!isLogin && !name)) {
       setError("Please fill all required fields.");
       return;
     }
 
-    // prepare payload
+    // PAYLOAD
     const payload = isLogin
-      ? { username, password }         // login needs only these
-      : { name, username, password };  // signup needs all
+      ? { username, password }
+      : { name, username, password };
 
-    // FIXED URL
+    // FIXED URL (NO /api/)
     const url = isLogin
-      ? "/api/users/login"
-      : "/api/users/register";
+      ? "/users/login"
+      : "/users/register";
 
     const res = await post(url, payload);
 
@@ -44,7 +45,7 @@ export default function Authentication() {
       return;
     }
 
-    // save login
+    // SAVE LOGIN INFO
     if (res.token) localStorage.setItem("token", res.token);
     if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
 
@@ -80,7 +81,6 @@ export default function Authentication() {
         </div>
 
         <form onSubmit={handleSubmit} className="authForm">
-
           {!isLogin && (
             <>
               <label>Name *</label>
