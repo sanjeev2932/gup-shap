@@ -1,7 +1,8 @@
 // frontend/src/utils/api.js
 
 // Load base URL from .env
-const API_BASE = import.meta.env.VITE_SERVER_URL;
+const API_BASE = process.env.REACT_APP_SERVER_URL;
+
 
 // ===== FIXED safeParse =====
 async function safeParse(res) {
