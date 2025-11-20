@@ -4,48 +4,45 @@ import React, { useEffect, useRef } from "react";
 export default function VideoTile({
   id,
   username,
-  stream,         // MediaStream object (may be undefined until attached)
-  active = false, // boolean - active speaker spotlight
-  sharing = false,// boolean - screen sharing by this user
-  raised = false, // boolean - raised hand
+  stream,
+  active = false,
+  sharing = false,
+  raised = false,
 }) {
   const videoRef = useRef();
 
   useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-
+    if (!videoRef.current) return;
     if (stream) {
       try {
-        v.srcObject = stream;
+        videoRef.current.srcObject = stream;
       } catch {
-        v.src = URL.createObjectURL(stream);
+        videoRef.current.src = URL.createObjectURL(stream);
       }
     } else {
-      // clear
-      try { v.srcObject = null; } catch {}
-      v.removeAttribute("src");
+      try {
+        videoRef.current.srcObject = null;
+      } catch {}
+      videoRef.current.removeAttribute("src");
     }
   }, [stream]);
 
   return (
     <div
-      className={`participantTile ${sharing ? "screenTile" : ""} ${active ? "active" : ""}`}
+      className={`participantTile ${sharing ? "screenTile" : ""} ${
+        active ? "active" : ""
+      }`}
       data-peer={id}
-      data-active={active ? "true" : "false"}
-      data-screenshare={sharing ? "true" : "false"}
-      role="group"
-      aria-label={username || id}
     >
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        muted={id === "local"} /* local preview muted so you don't echo */
+        muted={false}
         className="remoteVideoEl"
       />
-      <div className="tileLabel">{username || id}</div>
-      {raised && <div className="raisedBadge" aria-hidden>✋</div>}
+      <div className="tileLabel">{username}</div>
+      {raised && <div className="raisedBadge">✋</div>}
     </div>
   );
 }
