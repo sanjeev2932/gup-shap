@@ -1,179 +1,103 @@
-/* videoMeetOverrides.css – polished overrides for Gen-Z UI */
+/* ---------------- PIN FEATURE ---------------- */
 
-/* ----------------------------------------- */
-/* TOPBAR */
-/* ----------------------------------------- */
-.topbar {
-  width: 100%;
-  background: transparent;
-  padding: 14px 28px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  z-index: 30;
-}
-
-.roomLabel {
-  font-weight: 700;
-  color: #0d2a3a;
-  font-size: 15px;
-}
-
-.roomId {
-  color: #007fcc;
-  background: linear-gradient(90deg,#e8f8ff,#e9f7ff);
-  padding: 6px 12px;
-  border-radius: 999px;
-  margin-left: 8px;
-  font-weight: 800;
-  box-shadow: 0 8px 20px rgba(0,160,255,0.08);
-}
-
-/* ----------------------------------------- */
-/* BADGES */
-/* ----------------------------------------- */
-.statusBadges {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.hostBadge {
-  background: linear-gradient(135deg,#d7ffe5,#eafff2);
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-weight: 800;
-  color: #0f6a3a;
-}
-
-.countBadge {
-  background: linear-gradient(135deg,#f3f8ff,#eef6ff);
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-weight: 700;
-  color: #1a4a7a;
-}
-
-/* ----------------------------------------- */
-/* BACKGROUND PASTEL BLOBS */
-/* ----------------------------------------- */
-.video-container::before,
-.video-container::after {
-  content: "";
-  position: absolute;
-  z-index: -2;
-  pointer-events: none;
-}
-
-.video-container::before {
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle at 20% 20%, #ffd7ef 0%, #ffd7ef 30%, transparent 60%);
-  left: -80px;
-  top: 50px;
-  filter: blur(40px);
-  border-radius: 50%;
-  animation: floatSmall 6s ease-in-out infinite;
-}
-
-.video-container::after {
-  width: 520px;
-  height: 520px;
-  background: radial-gradient(circle at 80% 80%, #c8d8ff 0%, #c8d8ff 30%, transparent 55%);
-  right: -120px;
-  bottom: -40px;
-  filter: blur(40px);
-  border-radius: 50%;
-  animation: floatSmall 7s ease-in-out infinite;
-}
-
-/* floating animation */
-@keyframes floatSmall {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-  100% { transform: translateY(0px); }
-}
-
-/* ----------------------------------------- */
-/* SCREEN SHARE OVERRIDES */
-/* ----------------------------------------- */
-
-.screenTile {
-  border: 2px solid #cde8ff;
-  background: #000;
-  box-shadow: 0px 18px 44px rgba(0, 120, 255, 0.22);
-}
-
-/* when screen share active → soften others */
-.remoteGrid:has(.screenTile) .participantTile:not(.screenTile) {
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(10, 20, 40, 0.12);
-  filter: brightness(0.92);
-}
-/* add to videoMeetOverrides.css (or videoComponent.css) */
-.participantTile {
-  border: 6px solid #ffffff; /* thick white border */
-  background: linear-gradient(180deg, #f7fbff, #eef9ff); /* light-blueish */
-  transition: transform 260ms cubic-bezier(.2,.9,.2,1), box-shadow 260ms;
-  box-shadow: 0 8px 26px rgba(10,30,60,0.06);
-}
-
-/* active tile pops forward and becomes larger */
-.participantTile.active {
-  transform: scale(1.06);
-  z-index: 30;
-  box-shadow: 0 22px 54px rgba(0,120,255,0.12);
-  border-color: rgba(0,160,255,0.12);
-}
-
-/* make screenTile span and look spotlight */
-.screenTile {
+.pinned {
   grid-column: 1 / -1 !important;
   grid-row: span 2;
-  height: 72vh !important;
-  max-height: 78vh;
-  border: 6px solid #ffffff;
-  background: #000;
+  height: 75vh !important;
+  z-index: 5;
+  transform: scale(1.03);
+  border: 3px solid #7cc2ff;
+  box-shadow: 0 12px 40px rgba(0, 150, 255, 0.3);
 }
 
-/* ----------------------------------------- */
-/* LOCAL PREVIEW OVERRIDES */
-/* ----------------------------------------- */
-
-.localFloating {
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(6px);
+.pinBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 22px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 4px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 20;
 }
 
-.localFloating.sharing {
-  border: 2px solid rgba(0, 180, 255, 0.5);
+/* When a tile is pinned → others shrink */
+.remoteGrid:has(.pinned) .participantTile:not(.pinned) {
+  opacity: 0.65;
+  filter: blur(1px);
+  scale: 0.92;
+  transition: 0.3s;
+}
+/* ---------------- PIN FEATURE ---------------- */
+
+.pinned {
+  grid-column: 1 / -1 !important;
+  grid-row: span 2;
+  height: 75vh !important;
+  z-index: 5;
+  transform: scale(1.03);
+  border: 3px solid #7cc2ff;
+  box-shadow: 0 12px 40px rgba(0, 150, 255, 0.3);
+}
+
+.pinBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 22px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 4px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.remoteGrid:has(.pinned) .participantTile:not(.pinned) {
+  opacity: 0.65;
+  filter: blur(1px);
+  scale: 0.92;
+  transition: 0.3s;
+}
+/* ---------------------- ACTIVE & PINNED TILE BOOST ---------------------- */
+
+/* Normal tile */
+.participantTile {
+  transition: all 0.25s ease;
+  border: 3px solid rgba(255,255,255,0.7);
+  border-radius: 14px;
+}
+
+/* Active speaker OR pinned tile → becomes larger */
+.participantTile.active,
+.participantTile.pinned {
+  transform: scale(1.35);
+  z-index: 5;
+  border-color: #5ebeff;
+  box-shadow: 0 12px 40px rgba(50,150,255,0.25);
+}
+
+/* All other tiles slightly shrink */
+.remoteGrid:has(.active) .participantTile:not(.active):not(.pinned),
+.remoteGrid:has(.pinned) .participantTile:not(.pinned) {
+  transform: scale(0.85);
   opacity: 0.92;
 }
 
-/* ----------------------------------------- */
-/* TILE LABELS */
-/* ----------------------------------------- */
-
-.tileLabel {
-  font-family: "Poppins", sans-serif;
-  font-size: 13px;
-  padding: 5px 12px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.55);
+/* Ensure smooth transitions */
+.remoteGrid .participantTile {
+  transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* ----------------------------------------- */
-/* ACTIVE SPEAKER (future feature) */
-/* ----------------------------------------- */
-
-.participantTile.active {
-  box-shadow: 0 18px 44px rgba(0,160,255,0.25);
-  border: 2px solid rgba(0,160,255,0.25);
-}
-
-/* Controls container always on top */
-.gs-controlsWrap {
-  z-index: 80 !important;
+/* Pin badge style */
+.pinBadge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 20px;
+  background: rgba(0,0,0,0.45);
+  padding: 4px 10px;
+  border-radius: 8px;
+  color: #fff;
+  z-index: 10;
 }

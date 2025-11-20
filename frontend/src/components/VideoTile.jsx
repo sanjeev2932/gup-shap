@@ -8,37 +8,54 @@ export default function VideoTile({
   active = false,
   sharing = false,
   raised = false,
+  pinned = false,
+  onPin, // callback from parent
 }) {
   const videoRef = useRef();
 
   useEffect(() => {
-    if (videoRef.current) {
+    const v = videoRef.current;
+    if (!v) return;
+
+    if (stream) {
       try {
-        videoRef.current.srcObject = stream || null;
-      } catch (err) {
-        videoRef.current.src = "";
+        v.srcObject = stream;
+      } catch {
+        v.src = URL.createObjectURL(stream);
       }
+    } else {
+      try {
+        v.srcObject = null;
+      } catch {}
+      v.removeAttribute("src");
     }
   }, [stream]);
 
   return (
     <div
-      className={`participantTile ${sharing ? "screenTile" : ""} ${
-        active ? "active" : ""
-      }`}
+      className={`participantTile
+        ${sharing ? "screenTile" : ""}
+        ${active ? "active" : ""}
+        ${pinned ? "pinned" : ""}`}
+      onClick={() => onPin(id)}
+      style={{ cursor: "pointer" }}
       data-peer={id}
     >
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        muted={false}
+        muted={id === "local"}
         className="remoteVideoEl"
       />
 
       <div className="tileLabel">{username || id}</div>
 
       {raised && <div className="raisedBadge">✋</div>}
+
+      {pinned && (
+        <div className="pinBadge">📌</div>
+      )}
     </div>
   );
 }

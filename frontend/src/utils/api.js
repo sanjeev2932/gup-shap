@@ -1,6 +1,6 @@
 // frontend/src/utils/api.js
 
-const API_BASE = "https://gup-shapbackend.onrender.com/api/v1";
+const API_BASE = "https://gup-shapbackend.onrender.com";   // ❗ Fixed – removed /api/v1
 
 // -------- Helper to parse response safely --------
 async function safeParse(res) {
@@ -51,7 +51,7 @@ export async function post(url, data = {}) {
   }
 }
 
-// -------- PUT Request --------
+// -------- PUT --------
 export async function put(url, data = {}) {
   try {
     const token = localStorage.getItem("token") || "";
@@ -71,7 +71,7 @@ export async function put(url, data = {}) {
   }
 }
 
-// -------- DELETE Request --------
+// -------- DELETE --------
 export async function remove(url) {
   try {
     const token = localStorage.getItem("token") || "";
