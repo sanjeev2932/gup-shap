@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import CallControls from "../components/CallControls";
-import VideoTile from "../components/";
+import VideoTile from "../components/VideoTile";   // ✅ FIXED IMPORT
 import "../styles/videoComponent.css";
 import "../styles/videoMeetOverrides.css";
 
@@ -22,41 +22,43 @@ export default function VideoMeet() {
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [toast, setToast] = useState("");
-  const [activeId, setActiveId] = useState(null);
 
-  // -----------------------------------------------------
-  // TOAST
+  // -----------------------------------------
+  // Toast helper
   function showToast(msg) {
     setToast(msg);
     setTimeout(() => setToast(""), 2500);
   }
 
-  // -----------------------------------------------------
-  // INIT SOCKET + JOIN ROOM
+  // -----------------------------------------
+  // Initialize socket + join
   useEffect(() => {
-    const paths = window.location.pathname.split("/");
-    const id = paths[2] || "lobby";
-    setRoomId(id);
+    const room = window.location.pathname.split("/")[2] || "lobby";
+    setRoomId(room);
 
     socketRef.current = io(SIGNAL_SERVER, { transports: ["websocket"] });
 
     socketRef.current.on("connect", () => {
-      const username = localStorage?.user
-        ? JSON.parse(localStorage.user).name
-        : "Guest";
+      const username =
+        localStorage.user ? JSON.parse(localStorage.user).name : "Guest";
 
-      socketRef.current.emit("join-request", { room: id, username });
+      socketRef.current.emit("join-request", {
+        room,
+        username,
+      });
     });
 
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
       setIsHost(payload.isHost);
       await startLocalMedia(payload.members || []);
+      showToast("You joined the room");
     });
 
     socketRef.current.on("approved", async (payload) => {
       setParticipants(payload.members || []);
       await startLocalMedia(payload.members || []);
+      showToast("Approved — you are in!");
     });
 
     socketRef.current.on("members", (list) => {
@@ -67,11 +69,15 @@ export default function VideoMeet() {
       if (type === "offer") await handleOffer(from, data);
       if (type === "answer") {
         const pc = peersRef.current[from];
-        if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data));
+        if (pc) pc.setRemoteDescription(new RTCSessionDescription(data));
       }
       if (type === "candidate") {
         const pc = peersRef.current[from];
-        if (pc) try { await pc.addIceCandidate(data); } catch {}
+        if (pc) {
+          try {
+            await pc.addIceCandidate(data);
+          } catch {}
+        }
       }
     });
 
@@ -84,27 +90,29 @@ export default function VideoMeet() {
     return () => cleanup();
   }, []);
 
-  // -----------------------------------------------------
-  // LOCAL MEDIA
-  async function startLocalMedia(members) {
+  // -----------------------------------------
+  // Start Local Camera + Audio
+  async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: camOn,
         audio: micOn,
       });
+
       localStreamRef.current = stream;
       if (localRef.current) localRef.current.srcObject = stream;
     }
 
-    for (const m of members) {
+    // Create PeerConnections for existing users
+    for (const m of existingMembers) {
       if (m.id !== socketRef.current.id) {
         await createPeerAndOffer(m.id);
       }
     }
   }
 
-  // -----------------------------------------------------
-  // PEER CONNECTION
+  // -----------------------------------------
+  // Create peer + send offer
   async function createPeerAndOffer(remoteId) {
     if (peersRef.current[remoteId]) return;
 
@@ -140,6 +148,8 @@ export default function VideoMeet() {
     });
   }
 
+  // -----------------------------------------
+  // Handle offer → send answer
   async function handleOffer(from, offer) {
     let pc = peersRef.current[from];
 
@@ -150,19 +160,20 @@ export default function VideoMeet() {
 
       peersRef.current[from] = pc;
 
-      localStreamRef.current.getTracks().forEach((t) =>
-        pc.addTrack(t, localStreamRef.current)
+      localStreamRef.current.getTracks().forEach((track) =>
+        pc.addTrack(track, localStreamRef.current)
       );
 
       pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
 
       pc.onicecandidate = (e) => {
-        if (e.candidate)
+        if (e.candidate) {
           socketRef.current.emit("signal", {
             to: from,
             type: "candidate",
             data: e.candidate,
           });
+        }
       };
     }
 
@@ -177,8 +188,8 @@ export default function VideoMeet() {
     });
   }
 
-  // -----------------------------------------------------
-  // STREAM ATTACH
+  // -----------------------------------------
+  // Add remote stream
   function attachRemoteStream(peerId, stream) {
     setStreams((prev) => ({ ...prev, [peerId]: stream }));
 
@@ -189,6 +200,7 @@ export default function VideoMeet() {
     });
   }
 
+  // Remove remote stream
   function removeRemoteStream(peerId) {
     setStreams((prev) => {
       const c = { ...prev };
@@ -197,8 +209,8 @@ export default function VideoMeet() {
     });
   }
 
-  // -----------------------------------------------------
-  // CONTROLS
+  // -----------------------------------------
+  // Controls
   const toggleMic = () => {
     const tr = localStreamRef.current.getAudioTracks();
     tr.forEach((t) => (t.enabled = !t.enabled));
@@ -226,8 +238,8 @@ export default function VideoMeet() {
     Object.values(peersRef.current).forEach((pc) => pc.close());
   }
 
-  // -----------------------------------------------------
-  // UI RENDER
+  // -----------------------------------------
+  // UI
   return (
     <div className="video-container">
       <div className="topbar">
@@ -249,9 +261,6 @@ export default function VideoMeet() {
               id={p.id}
               username={p.username}
               stream={streams[p.id]}
-              active={activeId === p.id}
-              sharing={p.sharing}
-              raised={p.raised}
             />
           ))}
         </div>

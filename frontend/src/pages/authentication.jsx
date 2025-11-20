@@ -13,10 +13,10 @@ export default function Authentication() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // detect #signin or #signup
   useEffect(() => {
     const h = (location.hash || "").replace("#", "");
-    if (h === "signup") setIsLogin(false);
-    else setIsLogin(true);
+    setIsLogin(h !== "signup");
   }, [location.hash]);
 
   const handleSubmit = async (e) => {
@@ -27,10 +27,15 @@ export default function Authentication() {
       return;
     }
 
-    const payload = { name, username, password };
+    // prepare payload
+    const payload = isLogin
+      ? { username, password }         // login needs only these
+      : { name, username, password };  // signup needs all
 
-    // ✅ FIXED URL
-    const url = isLogin ? "/users/login" : "/users/register";
+    // FIXED URL
+    const url = isLogin
+      ? "/api/users/login"
+      : "/api/users/register";
 
     const res = await post(url, payload);
 
@@ -39,6 +44,7 @@ export default function Authentication() {
       return;
     }
 
+    // save login
     if (res.token) localStorage.setItem("token", res.token);
     if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
 
@@ -64,22 +70,17 @@ export default function Authentication() {
 
       <div className="authCard">
         <div className="authTabs">
-          <button
-            className={isLogin ? "tab active" : "tab"}
-            onClick={openSignIn}
-          >
+          <button className={isLogin ? "tab active" : "tab"} onClick={openSignIn}>
             Sign In
           </button>
 
-          <button
-            className={!isLogin ? "tab active" : "tab"}
-            onClick={openSignUp}
-          >
+          <button className={!isLogin ? "tab active" : "tab"} onClick={openSignUp}>
             Sign Up
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="authForm">
+
           {!isLogin && (
             <>
               <label>Name *</label>
