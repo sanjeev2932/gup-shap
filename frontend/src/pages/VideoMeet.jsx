@@ -30,7 +30,10 @@ export default function VideoMeet() {
     socketRef.current = io(SIGNAL_SERVER, { transports: ["websocket"] });
 
     socketRef.current.on("connect", () => {
-      const username = localStorage?.user ? JSON.parse(localStorage.user).name : "Guest";
+      const username = localStorage?.user
+        ? JSON.parse(localStorage.user).name
+        : "Guest";
+
       socketRef.current.emit("join-request", { room: id, username });
     });
 
@@ -41,7 +44,9 @@ export default function VideoMeet() {
       showToast("You joined the room");
     });
 
-    socketRef.current.on("lobby-wait", () => showToast("Waiting for host approval..."));
+    socketRef.current.on("lobby-wait", () =>
+      showToast("Waiting for host approval...")
+    );
 
     socketRef.current.on("approved", async (payload) => {
       setParticipants(payload.members || []);
@@ -86,7 +91,10 @@ export default function VideoMeet() {
   async function startLocalMedia(existing = []) {
     if (!localStreamRef.current) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
         localStreamRef.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
       } catch {
@@ -188,7 +196,6 @@ export default function VideoMeet() {
       tile.playsInline = true;
       tile.className = "remoteVideoEl";
       tile.setAttribute("data-peer", id);
-
       grid.appendChild(tile);
     }
 
@@ -243,11 +250,17 @@ export default function VideoMeet() {
     setIsSharingScreen(false);
   };
 
+  // ---------------- FIXED raiseHand() ----------------
   const raiseHand = () => {
+    const username = localStorage.user
+      ? JSON.parse(localStorage.user).name
+      : "Guest";
+
     socketRef.current.emit("raise-hand", {
       room: roomId,
-      username: user?.name,
+      username,
     });
+
     showToast("You raised your hand");
   };
 
