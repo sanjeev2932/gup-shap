@@ -1,7 +1,7 @@
 // frontend/src/pages/JoinExisting.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/landing.css"; // reuse clean UI styles
+import "../styles/landing.css"; 
 import "../styles/joinExisting.css";
 
 export default function JoinExisting() {
@@ -11,7 +11,9 @@ export default function JoinExisting() {
   const joinNow = () => {
     const id = room.trim();
     if (!id) return alert("Enter a valid meeting code.");
-    navigate(`/${id}`);
+
+    // ✅ correct meeting route
+    navigate(`/meet/${id}`);
   };
 
   const generate = () => {
@@ -21,19 +23,16 @@ export default function JoinExisting() {
 
   return (
     <div className="joinExistingContainer">
-      
+
       {/* Header */}
       <header className="joinHeader">
         <h2 className="logoText">Gup-Shap</h2>
-
-        <div className="navRight">
-          <button className="backBtn" onClick={() => navigate("/")}>
-            ← Back
-          </button>
-        </div>
+        <button className="backBtn" onClick={() => navigate("/")}>
+          ← Back
+        </button>
       </header>
 
-      {/* Main card */}
+      {/* Card */}
       <div className="joinCard">
         <h1 className="joinTitle">Join a Meeting</h1>
         <p className="joinDesc">Enter a meeting code or generate a new one.</p>
@@ -58,6 +57,7 @@ export default function JoinExisting() {
 
         <p className="tipText">Share this code with the person you want to call.</p>
       </div>
+
     </div>
   );
 }

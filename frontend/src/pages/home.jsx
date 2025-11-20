@@ -1,7 +1,7 @@
 // frontend/src/pages/home.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/home.css"; // correct CSS
+import "../styles/home.css";  // MUST exist
 
 export default function Home() {
   const navigate = useNavigate();
@@ -13,15 +13,14 @@ export default function Home() {
   }, []);
 
   const handleJoin = () => {
-    if (!meetingCode.trim()) {
-      return alert("Enter a valid meeting code.");
-    }
-    navigate(`/meet/${meetingCode.trim()}`); // correct meeting route
+    const code = meetingCode.trim();
+    if (!code) return alert("Enter a valid meeting code.");
+    navigate(`/meet/${code}`);
   };
 
   const createNew = () => {
     const rnd = Math.random().toString(36).substring(2, 9);
-    navigate(`/meet/${rnd}`); // correct new meeting route
+    navigate(`/meet/${rnd}`);
   };
 
   const logout = () => {
@@ -32,6 +31,8 @@ export default function Home() {
 
   return (
     <div className="homePageContainer">
+
+      {/* HEADER */}
       <header className="homeNav">
         <h2 className="logoText">Gup-Shap</h2>
 
@@ -39,12 +40,14 @@ export default function Home() {
           <button className="historyBtn" onClick={() => navigate("/history")}>
             History
           </button>
+
           <button className="logoutBtn" onClick={logout}>
             Logout
           </button>
         </div>
       </header>
 
+      {/* MAIN */}
       <main className="homeMain">
         <div className="leftBlock">
           <h1 className="homeTitle">
@@ -73,10 +76,16 @@ export default function Home() {
           </div>
         </div>
 
+        {/* RIGHT SIDE IMAGE */}
         <div className="rightBlock">
-          <img src="/mobile.png" className="homeImage" alt="illustration" />
+          <img
+            src="/mobile.png"
+            className="homeImage"
+            alt="illustration"
+          />
         </div>
       </main>
+
     </div>
   );
 }

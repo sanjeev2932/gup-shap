@@ -16,6 +16,7 @@ export function connectToSocket(server) {
   io.on("connection", (socket) => {
     console.log("socket connected:", socket.id);
 
+    // ------------------ JOIN REQUEST ------------------
     socket.on("join-request", ({ room, username }) => {
       username = username || socket.id;
 
@@ -24,10 +25,15 @@ export function connectToSocket(server) {
 
       const state = rooms[room];
 
-      // Make first user host
+      // FIRST USER = HOST
       if (!state.hostId) {
         state.hostId = socket.id;
-        state.members.push({ id: socket.id, username, mic: true, cam: true });
+        state.members.push({
+          id: socket.id,
+          username,
+          mic: true,
+          cam: true,
+        });
 
         socket.join(room);
         socket.emit("joined", { members: state.members, isHost: true });
@@ -35,8 +41,9 @@ export function connectToSocket(server) {
         return;
       }
 
-      // Others → pending
+      // OTHERS → PENDING APPROVAL
       state.pending.push({ id: socket.id, username });
+
       io.to(state.hostId).emit("lobby-request", {
         id: socket.id,
         username,
@@ -45,6 +52,7 @@ export function connectToSocket(server) {
       socket.emit("lobby-wait", { hostId: state.hostId });
     });
 
+    // ------------------ APPROVE JOIN ------------------
     socket.on("approve-join", ({ room, userId }) => {
       const state = rooms[room];
       if (!state || socket.id !== state.hostId) return;
@@ -67,17 +75,20 @@ export function connectToSocket(server) {
       });
 
       io.to(room).emit("members", state.members);
+
       io.to(room).emit("user-joined", {
         id: approved.id,
         username: approved.username,
       });
     });
 
+    // ------------------ MEMBER SNAPSHOT ------------------
     socket.on("get-members", ({ room }) => {
       const state = rooms[room] || { members: [] };
       socket.emit("members", state.members);
     });
 
+    // ------------------ SIGNALING (RTC) ------------------
     socket.on("signal", ({ to, type, data }) => {
       io.to(to).emit("signal", {
         from: socket.id,
@@ -86,6 +97,7 @@ export function connectToSocket(server) {
       });
     });
 
+    // ------------------ MEDIA UPDATE ------------------
     socket.on("media-update", ({ room, mic, cam }) => {
       const state = rooms[room];
       if (!state) return;
@@ -99,12 +111,19 @@ export function connectToSocket(server) {
       io.to(room).emit("members", state.members);
     });
 
+    // ------------------ SCREEN SHARE (ADDED) ------------------
+    socket.on("screen-share", ({ room, from, sharing }) => {
+      io.to(room).emit("screen-share", { from, sharing });
+    });
+
+    // ------------------ RAISE HAND ------------------
     socket.on("raise-hand", ({ room }) => {
       const state = rooms[room];
       if (!state) return;
 
       const username =
-        state.members.find((m) => m.id === socket.id)?.username || socket.id;
+        state.members.find((m) => m.id === socket.id)?.username ||
+        socket.id;
 
       io.to(room).emit("raise-hand", {
         from: socket.id,
@@ -112,6 +131,7 @@ export function connectToSocket(server) {
       });
     });
 
+    // ------------------ DISCONNECT ------------------
     socket.on("disconnect", () => {
       console.log("socket disconnected:", socket.id);
 
@@ -119,15 +139,15 @@ export function connectToSocket(server) {
         const state = rooms[room];
         if (!state) continue;
 
+        // Remove from members
         const memIdx = state.members.findIndex((m) => m.id === socket.id);
-
         if (memIdx !== -1) {
           const left = state.members.splice(memIdx, 1)[0];
 
           io.to(room).emit("user-left", { id: left.id });
           io.to(room).emit("members", state.members);
 
-          // Host left → promote new host
+          // Host left → promote first member
           if (state.hostId === socket.id) {
             state.hostId = state.members.length
               ? state.members[0].id
@@ -138,7 +158,7 @@ export function connectToSocket(server) {
           }
         }
 
-        // Remove from pending if leaving
+        // Remove from pending
         const pendingIdx = state.pending.findIndex(
           (p) => p.id === socket.id
         );

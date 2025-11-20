@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "../styles/authNew.css"; // 🔥 new modern CSS
+import "../styles/authNew.css";
 import { post } from "../utils/api";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -11,12 +11,14 @@ export default function Authentication() {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const { hash } = useLocation();
+  const location = useLocation();
 
+  // ✅ Always run when hash changes
   useEffect(() => {
-    if (hash.includes("signup")) setIsLogin(false);
+    const h = (location.hash || "").replace("#", "");
+    if (h === "signup") setIsLogin(false);
     else setIsLogin(true);
-  }, [hash]);
+  }, [location.hash]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,36 +44,40 @@ export default function Authentication() {
     navigate("/home");
   };
 
+  const openSignIn = () => {
+    setIsLogin(true);
+    navigate("/auth#signin");
+  };
+
+  const openSignUp = () => {
+    setIsLogin(false);
+    navigate("/auth#signup");
+  };
+
   return (
     <div className="authPage">
-      {/* Header */}
       <header className="authHeader">
         <h2 className="logoText">Gup-Shap</h2>
         <button className="backBtn" onClick={() => navigate("/")}>← Back</button>
       </header>
 
-      {/* Card */}
       <div className="authCard">
         <div className="authTabs">
+
           <button
             className={isLogin ? "tab active" : "tab"}
-            onClick={() => {
-              setIsLogin(true);
-              window.location.hash = "signin";
-            }}
+            onClick={openSignIn}
           >
             Sign In
           </button>
 
           <button
             className={!isLogin ? "tab active" : "tab"}
-            onClick={() => {
-              setIsLogin(false);
-              window.location.hash = "signup";
-            }}
+            onClick={openSignUp}
           >
             Sign Up
           </button>
+
         </div>
 
         <form onSubmit={handleSubmit} className="authForm">

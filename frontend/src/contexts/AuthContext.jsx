@@ -1,72 +1,123 @@
 // frontend/src/contexts/AuthContext.jsx
-import React, { createContext, useEffect, useState } from "react";
-import server from "../environment";
+import React, { createContext, useState, useEffect } from "react";
+import axios from "axios";
+import server from "../environment"; // https://gup-shapbackend.onrender.com
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "null"));
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem("user") || "null")
+  );
 
+  const API = `${server}/api/v1`;
+
+  // ---------------------------
+  // SAVE TOKEN TO LOCAL STORAGE
+  // ---------------------------
   useEffect(() => {
     if (token) localStorage.setItem("token", token);
     else localStorage.removeItem("token");
   }, [token]);
 
+  // ---------------------------
+  // LOGIN
+  // ---------------------------
   const login = async (username, password) => {
     try {
-      const res = await fetch(`${server}/api/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
+      const res = await axios.post(`${API}/users/login`, {
+        username,
+        password,
       });
-      const j = await res.json();
-      if (res.ok && j.token) {
-        setToken(j.token);
-        setUser({ username });
-        localStorage.setItem("user", JSON.stringify({ username }));
+
+      if (res.data.success) {
+        setToken(res.data.token);
+        setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
         return { ok: true };
-      } else return { ok: false, message: j.message || "Login failed" };
-    } catch (e) {
-      return { ok: false, message: e.message };
+      }
+      return { ok: false, message: res.data.message };
+    } catch (err) {
+      return { ok: false, message: err.message };
     }
   };
 
+  // ---------------------------
+  // REGISTER
+  // ---------------------------
   const register = async (name, username, password) => {
     try {
-      const res = await fetch(`${server}/api/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, username, password })
+      const res = await axios.post(`${API}/users/register`, {
+        name,
+        username,
+        password,
       });
-      const j = await res.json();
-      if (res.ok) return { ok: true };
-      return { ok: false, message: j.message || "Register failed" };
-    } catch (e) {
-      return { ok: false, message: e.message };
+
+      if (res.data.success) return { ok: true };
+      return { ok: false, message: res.data.message };
+    } catch (err) {
+      return { ok: false, message: err.message };
     }
   };
 
-  const addToUserHistory = async (meetingCode) => {
+  // ---------------------------
+  // ADD TO USER HISTORY
+  // ---------------------------
+  const addToUserHistory = async (roomId) => {
     if (!token) return;
+
     try {
-      await fetch(`${server}/api/history/add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: token },
-        body: JSON.stringify({ meeting_code: meetingCode })
-      });
-    } catch (e) { /* ignore */ }
+      await axios.post(
+        `${API}/history/add`,
+        { roomId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.log("History Add Error:", err);
+    }
   };
 
+  // ---------------------------
+  // GET USER HISTORY
+  // ---------------------------
+  const getUserHistory = async () => {
+    if (!token) return [];
+
+    try {
+      const res = await axios.get(`${API}/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      return res.data?.history || [];
+    } catch (err) {
+      console.log("History Fetch Error:", err);
+      return [];
+    }
+  };
+
+  // ---------------------------
+  // LOGOUT
+  // ---------------------------
   const logout = () => {
-    setToken(null);
     setUser(null);
-    localStorage.removeItem("token");
+    setToken(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, register, logout, addToUserHistory }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        register,
+        logout,
+        addToUserHistory,
+        getUserHistory,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

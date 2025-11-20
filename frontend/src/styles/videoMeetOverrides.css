@@ -1,6 +1,8 @@
-/* videoMeetOverrides.css - page level overrides for Gen-Z meeting UI */
+/* videoMeetOverrides.css – polished overrides for Gen-Z UI */
 
-/* topbar */
+/* ----------------------------------------- */
+/* TOPBAR */
+/* ----------------------------------------- */
 .topbar {
   width: 100%;
   background: transparent;
@@ -10,7 +12,7 @@
   justify-content: space-between;
   align-items: center;
   position: relative;
-  z-index: 20;
+  z-index: 30;
 }
 
 .roomLabel {
@@ -22,31 +24,41 @@
 .roomId {
   color: #007fcc;
   background: linear-gradient(90deg,#e8f8ff,#e9f7ff);
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
   margin-left: 8px;
   font-weight: 800;
   box-shadow: 0 8px 20px rgba(0,160,255,0.08);
 }
 
-/* badges */
-.statusBadges { display: flex; gap: 12px; align-items: center; }
+/* ----------------------------------------- */
+/* BADGES */
+/* ----------------------------------------- */
+.statusBadges {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .hostBadge {
   background: linear-gradient(135deg,#d7ffe5,#eafff2);
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 10px;
   font-weight: 800;
   color: #0f6a3a;
 }
+
 .countBadge {
   background: linear-gradient(135deg,#f3f8ff,#eef6ff);
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 10px;
   font-weight: 700;
   color: #1a4a7a;
 }
 
-/* pastel background floating shapes on meeting page */
+/* ----------------------------------------- */
+/* BACKGROUND PASTEL BLOBS */
+/* ----------------------------------------- */
 .video-container::before,
 .video-container::after {
   content: "";
@@ -55,7 +67,6 @@
   pointer-events: none;
 }
 
-/* large left blob */
 .video-container::before {
   width: 420px;
   height: 420px;
@@ -64,9 +75,9 @@
   top: 50px;
   filter: blur(40px);
   border-radius: 50%;
+  animation: floatSmall 6s ease-in-out infinite;
 }
 
-/* right blob */
 .video-container::after {
   width: 520px;
   height: 520px;
@@ -75,23 +86,69 @@
   bottom: -40px;
   filter: blur(40px);
   border-radius: 50%;
+  animation: floatSmall 7s ease-in-out infinite;
 }
 
-/* small floating pastel circles for decoration */
+/* floating animation */
 @keyframes floatSmall {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
   100% { transform: translateY(0px); }
 }
 
-/* optional: active-speaker highlight (if you decide to toggle a class) */
-.participantTile.active {
-  box-shadow: 0 18px 44px rgba(0,160,255,0.12);
-  border: 1px solid rgba(0,160,255,0.12);
+/* ----------------------------------------- */
+/* SCREEN SHARE OVERRIDES */
+/* ----------------------------------------- */
+
+.screenTile {
+  border: 2px solid #cde8ff;
+  background: #000;
+  box-shadow: 0px 18px 44px rgba(0, 120, 255, 0.22);
 }
 
-/* ensure control bubble sits above the blobs */
-.gs-controlsWrap { z-index: 60; }
+/* when screen share active → soften others */
+.remoteGrid:has(.screenTile) .participantTile:not(.screenTile) {
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(10, 20, 40, 0.12);
+  filter: brightness(0.92);
+}
 
-/* small polish for labels */
-.tileLabel { font-family: "Poppins", sans-serif; }
+/* ----------------------------------------- */
+/* LOCAL PREVIEW OVERRIDES */
+/* ----------------------------------------- */
+
+.localFloating {
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(6px);
+}
+
+.localFloating.sharing {
+  border: 2px solid rgba(0, 180, 255, 0.5);
+  opacity: 0.92;
+}
+
+/* ----------------------------------------- */
+/* TILE LABELS */
+/* ----------------------------------------- */
+
+.tileLabel {
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.55);
+}
+
+/* ----------------------------------------- */
+/* ACTIVE SPEAKER (future feature) */
+/* ----------------------------------------- */
+
+.participantTile.active {
+  box-shadow: 0 18px 44px rgba(0,160,255,0.25);
+  border: 2px solid rgba(0,160,255,0.25);
+}
+
+/* Controls container always on top */
+.gs-controlsWrap {
+  z-index: 80 !important;
+}

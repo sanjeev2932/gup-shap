@@ -1,0 +1,25 @@
+.historyPage {
+  padding: 40px;
+  max-width: 600px;
+  margin: auto;
+  font-family: Poppins, sans-serif;
+}
+
+.historyTitle {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.historyList {
+  list-style: none;
+  padding: 0;
+}
+
+.historyItem {
+  padding: 12px 20px;
+  margin-bottom: 12px;
+  background: #f3f7ff;
+  border-radius: 10px;
+  font-size: 16px;
+}

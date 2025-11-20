@@ -6,19 +6,19 @@ import "../styles/landing.css";
 export default function Landing() {
   const navigate = useNavigate();
 
-  function handleStartMeeting() {
+  const handleStartMeeting = () => {
     const user = localStorage.getItem("user");
     if (user) navigate("/home");
-    else navigate("/auth#signin");
-  }
+    else navigate("/auth#signin"); // go to Sign In
+  };
 
-  function handleJoin() {
-    navigate("/join");  // ✅ FIXED — correct route
-  }
+  const handleJoin = () => {
+    navigate("/joinExisting"); // ✅ correct route
+  };
 
-  function openAuth(tab = "signin") {
-    navigate(`/auth#${tab}`);
-  }
+  const openAuth = (tab = "signin") => {
+    navigate(`/auth#${tab}`); // signin / signup
+  };
 
   return (
     <div className="landingWrapper">
@@ -28,19 +28,19 @@ export default function Landing() {
         <div className="navLogo">Gup-Shap</div>
 
         <div className="navActions">
-          <button
-            className="bubbleBtn white"
-            onClick={() => openAuth("signin")}
-          >
-            Register / Login
+          <button className="bubbleBtn white" onClick={() => openAuth("signup")}>
+            Register
+          </button>
+
+          <button className="bubbleBtn outline" onClick={() => openAuth("signin")}>
+            Login
           </button>
         </div>
       </nav>
 
-      {/* HERO SECTION */}
+      {/* HERO */}
       <section className="heroSection">
 
-        {/* LEFT */}
         <div className="heroLeft">
           <h1 className="heroTitle">
             <span className="colorBlue">Connect.</span>
@@ -65,7 +65,7 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT ILLUSTRATION */}
         <div className="heroRight">
           <img
             src="/hero-phones.png"
@@ -75,7 +75,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* FLOATING SHAPES */}
+      {/* BACKGROUND SHAPES */}
       <div className="bgShape shape1"></div>
       <div className="bgShape shape2"></div>
       <div className="bgShape shape3"></div>
