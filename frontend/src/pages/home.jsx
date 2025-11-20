@@ -1,7 +1,7 @@
 // frontend/src/pages/home.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/landing.css"; // for consistent UI
+import "../styles/home.css"; // correct CSS
 
 export default function Home() {
   const navigate = useNavigate();
@@ -16,12 +16,12 @@ export default function Home() {
     if (!meetingCode.trim()) {
       return alert("Enter a valid meeting code.");
     }
-    navigate(`/${meetingCode}`);
+    navigate(`/meet/${meetingCode.trim()}`); // correct meeting route
   };
 
   const createNew = () => {
     const rnd = Math.random().toString(36).substring(2, 9);
-    navigate(`/${rnd}`);
+    navigate(`/meet/${rnd}`); // correct new meeting route
   };
 
   const logout = () => {
@@ -39,7 +39,9 @@ export default function Home() {
           <button className="historyBtn" onClick={() => navigate("/history")}>
             History
           </button>
-          <button className="logoutBtn" onClick={logout}>Logout</button>
+          <button className="logoutBtn" onClick={logout}>
+            Logout
+          </button>
         </div>
       </header>
 
