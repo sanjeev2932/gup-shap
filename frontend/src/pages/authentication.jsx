@@ -13,7 +13,6 @@ export default function Authentication() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Detect #signin or #signup
   useEffect(() => {
     const h = (location.hash || "").replace("#", "");
     setIsLogin(h !== "signup");
@@ -28,15 +27,14 @@ export default function Authentication() {
       return;
     }
 
-    // PAYLOAD
     const payload = isLogin
       ? { username, password }
       : { name, username, password };
 
-    // FIXED URL (NO DOUBLE /api/)
+    // ✔ CORRECTED URL
     const url = isLogin
-      ? "/auth/login"
-      : "/auth/register";
+      ? "/api/auth/login"
+      : "/api/auth/register";
 
     const res = await post(url, payload);
 
@@ -45,43 +43,39 @@ export default function Authentication() {
       return;
     }
 
-    // SAVE LOGIN INFO
     if (res.token) localStorage.setItem("token", res.token);
     if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
 
     navigate("/home");
   };
 
-  const openSignIn = () => {
-    setIsLogin(true);
-    navigate("/auth#signin");
-  };
-
-  const openSignUp = () => {
-    setIsLogin(false);
-    navigate("/auth#signup");
-  };
-
   return (
     <div className="authPage">
       <header className="authHeader">
         <h2 className="logoText">Gup-Shap</h2>
-        <button className="backBtn" onClick={() => navigate("/")}>← Back</button>
+        <button className="backBtn" onClick={() => navigate("/")}>
+          ← Back
+        </button>
       </header>
 
       <div className="authCard">
         <div className="authTabs">
-          <button className={isLogin ? "tab active" : "tab"} onClick={openSignIn}>
+          <button
+            className={isLogin ? "tab active" : "tab"}
+            onClick={() => navigate("/auth#signin")}
+          >
             Sign In
           </button>
 
-          <button className={!isLogin ? "tab active" : "tab"} onClick={openSignUp}>
+          <button
+            className={!isLogin ? "tab active" : "tab"}
+            onClick={() => navigate("/auth#signup")}
+          >
             Sign Up
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="authForm">
-
           {!isLogin && (
             <>
               <label>Name *</label>

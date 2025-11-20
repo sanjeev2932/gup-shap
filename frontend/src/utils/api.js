@@ -1,9 +1,7 @@
 // frontend/src/utils/api.js
 
-// ✅ Correct API base — includes /api
-const API_BASE = "https://gup-shapbackend.onrender.com/api";
+const API_BASE = "https://gup-shapbackend.onrender.com";  
 
-// -------- Helper to parse response safely --------
 async function safeParse(res) {
   const txt = await res.text();
   try {
@@ -13,7 +11,6 @@ async function safeParse(res) {
   }
 }
 
-// -------- GET Request --------
 export async function get(url) {
   try {
     const token = localStorage.getItem("token") || "";
@@ -32,7 +29,6 @@ export async function get(url) {
   }
 }
 
-// -------- POST Request --------
 export async function post(url, data = {}) {
   try {
     const token = localStorage.getItem("token") || "";
@@ -52,7 +48,6 @@ export async function post(url, data = {}) {
   }
 }
 
-// -------- PUT Request --------
 export async function put(url, data = {}) {
   try {
     const token = localStorage.getItem("token") || "";
@@ -72,7 +67,6 @@ export async function put(url, data = {}) {
   }
 }
 
-// -------- DELETE Request --------
 export async function remove(url) {
   try {
     const token = localStorage.getItem("token") || "";

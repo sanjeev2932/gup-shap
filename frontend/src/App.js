@@ -1,40 +1,29 @@
-// frontend/src/App.js
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+const API_BASE = "https://gup-shapbackend.onrender.com/api";
 
-import Landing from "./pages/landing";
-import Authentication from "./pages/authentication";
-import Home from "./pages/home";        // ✅ CORRECT IMPORT
-import VideoMeet from "./pages/VideoMeet";
-import JoinExisting from "./pages/joinExisting";  // ✅ Only if needed
-import History from "./pages/history";            // Optional if you have it
-
-function App() {
-  return (
-    <Router>
-      <Routes>
-
-        {/* Public Landing Page */}
-        <Route path="/" element={<Landing />} />
-
-        {/* Login / Signup */}
-        <Route path="/auth" element={<Authentication />} />
-
-        {/* User Home Page */}
-        <Route path="/home" element={<Home />} />
-
-        {/* Join With Code Page */}
-        <Route path="/joinExisting" element={<JoinExisting />} />
-
-        {/* Meeting Page */}
-        <Route path="/meet/:roomId" element={<VideoMeet />} />
-
-        {/* History (optional) */}
-        <Route path="/history" element={<History />} />
-
-      </Routes>
-    </Router>
-  );
+async function safeParse(res) {
+  const txt = await res.text();
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return { success: res.ok, message: txt || "Unknown server response" };
+  }
 }
 
-export default App;
+export async function post(url, data = {}) {
+  try {
+    const token = localStorage.getItem("token") || "";
+
+    const res = await fetch(`${API_BASE}${url}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify(data),
+    });
+
+    return await safeParse(res);
+  } catch (err) {
+    return { success: false, message: "Network error" };
+  }
+}
