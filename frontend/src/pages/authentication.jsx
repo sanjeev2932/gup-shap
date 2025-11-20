@@ -35,8 +35,9 @@ export default function Authentication() {
 
     // FIXED URL (NO /api/)
     const url = isLogin
-      ? "/users/login"
-      : "/users/register";
+  ? "/api/auth/login"
+  : "/api/auth/register";
+
 
     const res = await post(url, payload);
 
