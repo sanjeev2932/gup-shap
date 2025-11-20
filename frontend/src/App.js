@@ -1,4 +1,4 @@
-const API_BASE = "https://gup-shapbackend.onrender.com/api";
+const API_BASE = "https://gup-shapbackend.onrender.com";
 
 async function safeParse(res) {
   const txt = await res.text();
