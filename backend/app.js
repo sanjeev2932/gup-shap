@@ -1,33 +1,42 @@
 import express from "express";
 import cors from "cors";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
+import http from "http";
+import { Server } from "socket.io";
 import userRoutes from "./routes/users.routes.js";
 
 dotenv.config();
 
 const app = express();
-
-// Middlewares
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use("/api/auth", userRoutes);
+// API Routes
+app.use("/api/users", userRoutes);
 
-// Root test
+// Basic test route
 app.get("/", (req, res) => {
-  res.json({ success: true, message: "Backend running OK" });
+  res.json({ status: "Backend running!" });
 });
 
-// MongoDB Connect
-const MONGO_URL = process.env.MONGO_URL;
+// Create HTTP Server
+const server = http.createServer(app);
 
-mongoose
-  .connect(MONGO_URL)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log("MongoDB error:", err));
+// Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  }
+});
 
-// Server start
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+// Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+server.listen(PORT, () => console.log("Server running on port", PORT));

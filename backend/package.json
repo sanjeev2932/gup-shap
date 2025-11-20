@@ -1,14 +1,11 @@
 {
   "name": "gupshap-backend",
   "version": "1.0.0",
-  "description": "Backend for Gup-Shap video meeting app",
   "type": "module",
   "main": "src/app.js",
-
   "scripts": {
     "start": "node src/app.js"
   },
-
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
