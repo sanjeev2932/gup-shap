@@ -33,11 +33,10 @@ export default function Authentication() {
       ? { username, password }
       : { name, username, password };
 
-    // FIXED URL (NO /api/)
+    // FIXED URL (NO DOUBLE /api/)
     const url = isLogin
-  ? "/api/auth/login"
-  : "/api/auth/register";
-
+      ? "/auth/login"
+      : "/auth/register";
 
     const res = await post(url, payload);
 
@@ -82,6 +81,7 @@ export default function Authentication() {
         </div>
 
         <form onSubmit={handleSubmit} className="authForm">
+
           {!isLogin && (
             <>
               <label>Name *</label>
