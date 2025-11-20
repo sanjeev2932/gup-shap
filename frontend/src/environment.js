@@ -1,2 +1,2 @@
-const server = import.meta.env.VITE_SERVER_URL || window.location.origin;
+const server = process.env.REACT_APP_SERVER_URL || window.location.origin;
 export default server;
