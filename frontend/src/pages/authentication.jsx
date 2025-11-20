@@ -31,10 +31,10 @@ export default function Authentication() {
       ? { username, password }
       : { name, username, password };
 
-    // ✔ CORRECTED URL (matches your backend)
+    // ✔ FINAL CORRECT ROUTES
     const url = isLogin
-      ? "/api/users/login"
-      : "/api/users/register";
+      ? "/users/login"
+      : "/users/register";
 
     const res = await post(url, payload);
 

@@ -1,7 +1,7 @@
 // frontend/src/utils/api.js
 
-const API_BASE = "https://gup-shapbackend.onrender.com/api/auth";
-
+// Load base URL from .env
+const API_BASE = import.meta.env.VITE_SERVER_URL;
 
 // ===== FIXED safeParse =====
 async function safeParse(res) {
