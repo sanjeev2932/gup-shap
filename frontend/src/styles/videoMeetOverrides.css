@@ -1,4 +1,97 @@
-/* frontend/src/styles/videoMeetOverrides.css */
-video { background:#000; border-radius:8px; }
-.remote-video { height: 200px; }
-.local-video { height: 140px; width:100%; border:2px solid rgba(255,255,255,0.03); }
+/* videoMeetOverrides.css - page level overrides for Gen-Z meeting UI */
+
+/* topbar */
+.topbar {
+  width: 100%;
+  background: transparent;
+  padding: 14px 28px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 20;
+}
+
+.roomLabel {
+  font-weight: 700;
+  color: #0d2a3a;
+  font-size: 15px;
+}
+
+.roomId {
+  color: #007fcc;
+  background: linear-gradient(90deg,#e8f8ff,#e9f7ff);
+  padding: 6px 10px;
+  border-radius: 999px;
+  margin-left: 8px;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(0,160,255,0.08);
+}
+
+/* badges */
+.statusBadges { display: flex; gap: 12px; align-items: center; }
+.hostBadge {
+  background: linear-gradient(135deg,#d7ffe5,#eafff2);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  color: #0f6a3a;
+}
+.countBadge {
+  background: linear-gradient(135deg,#f3f8ff,#eef6ff);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  color: #1a4a7a;
+}
+
+/* pastel background floating shapes on meeting page */
+.video-container::before,
+.video-container::after {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* large left blob */
+.video-container::before {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle at 20% 20%, #ffd7ef 0%, #ffd7ef 30%, transparent 60%);
+  left: -80px;
+  top: 50px;
+  filter: blur(40px);
+  border-radius: 50%;
+}
+
+/* right blob */
+.video-container::after {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle at 80% 80%, #c8d8ff 0%, #c8d8ff 30%, transparent 55%);
+  right: -120px;
+  bottom: -40px;
+  filter: blur(40px);
+  border-radius: 50%;
+}
+
+/* small floating pastel circles for decoration */
+@keyframes floatSmall {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
+
+/* optional: active-speaker highlight (if you decide to toggle a class) */
+.participantTile.active {
+  box-shadow: 0 18px 44px rgba(0,160,255,0.12);
+  border: 1px solid rgba(0,160,255,0.12);
+}
+
+/* ensure control bubble sits above the blobs */
+.gs-controlsWrap { z-index: 60; }
+
+/* small polish for labels */
+.tileLabel { font-family: "Poppins", sans-serif; }

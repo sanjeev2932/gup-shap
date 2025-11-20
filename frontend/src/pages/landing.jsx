@@ -7,7 +7,6 @@ export default function Landing() {
   const navigate = useNavigate();
 
   function handleGetStarted() {
-    // If user logged in, go to /home otherwise go to /authentication
     const user = localStorage.getItem("user");
     if (user) navigate("/home");
     else navigate("/auth#signin");
@@ -18,36 +17,65 @@ export default function Landing() {
   }
 
   function openAuth(tab = "signin") {
-    // anchor with hash to force tab open
     navigate(`/auth#${tab}`);
   }
 
   return (
-    <div className="landingPageContainer">
-      <nav className="landingNav">
-        <div className="navHeader">
-          <h2>Gup-Shap</h2>
-        </div>
-        <div className="navlist">
-          <button className="link-btn" onClick={() => openAuth("signin")}>Register / Login</button>
+    <div className="landingWrapper">
+
+      {/* NAVBAR */}
+      <nav className="landingNavbar">
+        <div className="navLogo">Gup-Shap</div>
+
+        <div className="navActions">
+          <button className="bubbleBtn white" onClick={() => openAuth("signin")}>
+            Register / Login
+          </button>
         </div>
       </nav>
 
-      <div className="landingMainContainer">
-        <div className="landingLeft">
-          <h1><span className="accent">Connect</span> with your loved Ones</h1>
-          <p>Cover the distance with Gup-Shap — fast, lightweight video calls in a clean, modern UI.</p>
+      {/* HERO SECTION */}
+      <div className="heroSection">
 
-          <div className="ctaRow">
-            <button className="btn-primary large" onClick={handleGetStarted}>Get Started</button>
-            <button className="btn-outline" onClick={handleJoinExisting}>Join existing</button>
+        {/* LEFT SIDE */}
+        <div className="heroLeft">
+          <h1 className="heroTitle">
+            <span className="colorBlue">Connect.</span>
+            <span className="colorPurple"> Laugh.</span>
+            <span className="colorMango"> Talk.</span>
+            <br />
+            <span className="colorNeon">Gup-Shap.</span>
+          </h1>
+
+          <p className="heroSubtitle">
+            Fast, friendly, colorful video calls for everyone.
+          </p>
+
+          <div className="heroButtons">
+            <button className="bubbleBtn primary" onClick={handleGetStarted}>
+              Start a Meeting
+            </button>
+
+            <button className="bubbleBtn outline" onClick={handleJoinExisting}>
+              Join with Code
+            </button>
           </div>
         </div>
 
-        <div className="landingRight" aria-hidden>
-          <img src="/hero-phones.png" alt="phones" />
+        {/* RIGHT SIDE ILLUSTRATION */}
+        <div className="heroRight">
+          <img
+            src="/hero-phones.png"
+            alt="illustration"
+            className="heroIllustration"
+          />
         </div>
       </div>
+
+      {/* FLOATING GEN-Z SHAPES */}
+      <div className="bgShape shape1"></div>
+      <div className="bgShape shape2"></div>
+      <div className="bgShape shape3"></div>
     </div>
   );
 }

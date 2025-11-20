@@ -7,6 +7,39 @@ import "../styles/videoMeetOverrides.css";
 
 const SIGNAL_SERVER = "https://gup-shapbackend.onrender.com";
 
+/* ----------------------------------------------------
+   ACTIVE SPEAKER ANALYSER
+---------------------------------------------------- */
+function createAudioAnalyser(stream, peerId) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = ctx.createAnalyser();
+    const source = ctx.createMediaStreamSource(stream);
+
+    analyser.fftSize = 256;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    source.connect(analyser);
+
+    function detect() {
+      analyser.getByteFrequencyData(dataArray);
+      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+      const tile = document.querySelector(`[data-wrap="${peerId}"]`);
+      if (tile) {
+        if (avg > 55) tile.classList.add("active");
+        else tile.classList.remove("active");
+      }
+
+      requestAnimationFrame(detect);
+    }
+
+    detect();
+  } catch (err) {
+    console.warn("Audio analyser failed:", err);
+  }
+}
+
 export default function VideoMeet() {
   const localRef = useRef();
   const peersRef = useRef({});
@@ -23,9 +56,9 @@ export default function VideoMeet() {
 
   const audioCtxRef = useRef(null);
 
-  // ----------------------------------------------------
-  // SMALL SINGLE "DING" (0.12 sec)
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     SMALL "DING" JOIN SOUND
+  ---------------------------------------------------- */
   function playDing() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -33,7 +66,7 @@ export default function VideoMeet() {
       const gain = ctx.createGain();
 
       osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime); // clean ding tone
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
 
       gain.gain.setValueAtTime(0.0001, ctx.currentTime);
       gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
@@ -42,8 +75,6 @@ export default function VideoMeet() {
       gain.connect(ctx.destination);
 
       osc.start();
-
-      // fade-out very quickly
       gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
 
       setTimeout(() => {
@@ -55,9 +86,9 @@ export default function VideoMeet() {
     } catch {}
   }
 
-  // ----------------------------------------------------
-  // MAIN EFFECT
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     MAIN EFFECT
+  ---------------------------------------------------- */
   useEffect(() => {
     const id = window.location.pathname.replace("/", "") || "lobby";
     setRoomId(id);
@@ -93,25 +124,26 @@ export default function VideoMeet() {
       setParticipants(m || []);
     });
 
-    // 🔔 When new user joins → one clean ding
+    // 🔔 Ding on join
     socketRef.current.on("user-joined", ({ username }) => {
-      playDing(); // <--- here
+      playDing();
       showToast(`${username || "User"} joined`);
       socketRef.current.emit("get-members", { room: id });
     });
 
+    /* ------------ SIGNALS ------------ */
     socketRef.current.on("signal", async ({ from, type, data }) => {
       if (type === "offer") await handleOffer(from, data);
       else if (type === "answer") {
         const pc = peersRef.current[from];
-        if (pc)
-          await pc.setRemoteDescription(new RTCSessionDescription(data));
+        if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data));
       } else if (type === "candidate") {
         const pc = peersRef.current[from];
         if (pc) try { await pc.addIceCandidate(data); } catch {}
       }
     });
 
+    /* ------------ RAISED HAND ------------ */
     socketRef.current.on("raise-hand", ({ from, username }) => {
       showToast(`${username || from} raised hand`);
 
@@ -121,6 +153,19 @@ export default function VideoMeet() {
         )
       );
 
+      // 🔥 VISUAL RAISED HAND POP BADGE
+      const tile = document.querySelector(`[data-wrap="${from}"]`);
+      if (tile) {
+        const badge = tile.querySelector(".raisedBadge");
+        if (badge) {
+          badge.style.display = "block";
+          setTimeout(() => {
+            badge.style.display = "none";
+          }, 6000);
+        }
+      }
+
+      // remove raised-hand state
       setTimeout(() => {
         setParticipants((prev) =>
           prev.map((p) =>
@@ -130,12 +175,11 @@ export default function VideoMeet() {
       }, 6000);
     });
 
+    /* ------------ USER LEFT ------------ */
     socketRef.current.on("user-left", ({ id: leftId }) => {
       const pc = peersRef.current[leftId];
       if (pc) {
-        try {
-          pc.close();
-        } catch {}
+        try { pc.close(); } catch {}
         delete peersRef.current[leftId];
       }
 
@@ -146,12 +190,11 @@ export default function VideoMeet() {
     });
 
     return () => cleanup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ----------------------------------------------------
-  // LOCAL MEDIA
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     LOCAL MEDIA
+  ---------------------------------------------------- */
   async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       try {
@@ -161,6 +204,10 @@ export default function VideoMeet() {
         });
         localStreamRef.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
+
+        // 🔥 Local active speaker detection
+        createAudioAnalyser(stream, socketRef.current.id);
+
       } catch (e) {
         showToast("Camera/Mic permission denied");
         return;
@@ -175,9 +222,9 @@ export default function VideoMeet() {
     }
   }
 
-  // ----------------------------------------------------
-  // PEER CREATION
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     PEER CREATION
+  ---------------------------------------------------- */
   async function createPeerAndOffer(remoteId) {
     if (peersRef.current[remoteId]) return;
 
@@ -250,9 +297,9 @@ export default function VideoMeet() {
     });
   }
 
-  // ----------------------------------------------------
-  // REMOTE STREAM
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     REMOTE STREAM
+  ---------------------------------------------------- */
   function attachRemoteStream(peerId, stream) {
     setParticipants((prev) => {
       if (!prev.find((p) => p.id === peerId)) {
@@ -297,19 +344,22 @@ export default function VideoMeet() {
     } catch {
       vid.src = URL.createObjectURL(stream);
     }
+
+    /* 🔥 Enable active speaker detection for REMOTE users */
+    createAudioAnalyser(stream, peerId);
   }
 
-  // ----------------------------------------------------
-  // TOAST
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     TOAST
+  ---------------------------------------------------- */
   function showToast(msg, t = 3000) {
     setToast(msg);
     setTimeout(() => setToast(""), t);
   }
 
-  // ----------------------------------------------------
-  // CONTROLS
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     CONTROLS
+  ---------------------------------------------------- */
   const toggleMic = () => {
     if (!localStreamRef.current) return;
     const tr = localStreamRef.current.getAudioTracks();
@@ -334,9 +384,7 @@ export default function VideoMeet() {
       const track = disp.getVideoTracks()[0];
 
       Object.values(peersRef.current).forEach((pc) => {
-        const sender = pc
-          .getSenders()
-          .find((s) => s.track && s.track.kind === "video");
+        const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
         if (sender) sender.replaceTrack(track);
       });
 
@@ -348,9 +396,7 @@ export default function VideoMeet() {
           localRef.current.srcObject = localStreamRef.current;
 
           Object.values(peersRef.current).forEach((pc) => {
-            const sender = pc
-              .getSenders()
-              .find((s) => s.track && s.track.kind === "video");
+            const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
             if (sender)
               sender.replaceTrack(localStreamRef.current.getVideoTracks()[0]);
           });
@@ -374,9 +420,9 @@ export default function VideoMeet() {
     socketRef.current.emit("approve-join", { room: roomId, userId });
   };
 
-  // ----------------------------------------------------
-  // CLEANUP
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     CLEANUP
+  ---------------------------------------------------- */
   function cleanup() {
     try {
       socketRef.current.disconnect();
@@ -395,14 +441,15 @@ export default function VideoMeet() {
     peersRef.current = {};
   }
 
-  // ----------------------------------------------------
-  // RENDER
-  // ----------------------------------------------------
+  /* ----------------------------------------------------
+     RENDER
+  ---------------------------------------------------- */
   return (
     <div className="video-container">
       <div className="topbar">
         <div className="roomLabel">
-          Gup-Shap — Room: <span className="roomId">{roomId}</span>
+          Gup-Shap — Room:
+          <span className="roomId">{roomId}</span>
         </div>
 
         <div className="statusBadges">

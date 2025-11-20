@@ -1,55 +1,156 @@
-/* frontend/src/styles/landing.css */
-:root{
-  --bg:#0f1724;
-  --accent:#ff8a3d;
-  --muted:#94a3b8;
-  --white:#ffffff;
-}
-
-.landingPageContainer {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+/* === GLOBAL WRAPPER === */
+.landingWrapper {
+  width: 100%;
   min-height: 100vh;
-  background: linear-gradient(180deg,#071022 0%, #071522 70%);
-  color:var(--white);
-  padding:28px 48px;
-  box-sizing:border-box;
+  background: linear-gradient(to bottom, #dff3ff, #ffffff);
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 40px;
+  font-family: "Poppins", sans-serif;
 }
 
-.landingNav{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:24px;
+/* === NAVBAR === */
+.landingNavbar {
+  width: 92%;
+  margin: 0 auto;
+  margin-top: 25px;
+  padding: 14px 22px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
 }
 
-.navHeader h2{ color:var(--white); margin:0; font-weight:600; }
-.link-btn{ background:none; border:none; color:var(--white); cursor:pointer; opacity:0.9; }
-
-.landingMainContainer{
-  display:flex;
-  gap:40px;
-  align-items:center;
-  justify-content:space-between;
+.navLogo {
+  font-size: 28px;
+  font-weight: 700;
+  color: #00a9ff;
 }
 
-/* left */
-.landingLeft { max-width:720px; }
-.landingLeft h1 { font-size:46px; margin:0 0 12px 0; color:var(--white); }
-.landingLeft h1 .accent { color:var(--accent); }
-.landingLeft p { color:var(--muted); margin-bottom:20px; font-size:16px; }
+/* === HERO SECTION === */
+.heroSection {
+  width: 92%;
+  margin: 50px auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
-/* CTA */
-.ctaRow { display:flex; gap:16px; align-items:center; }
-.btn-primary { background:var(--accent); color:white; padding:12px 22px; border-radius:10px; border:none; cursor:pointer; font-weight:600; }
-.btn-primary.large { padding:14px 26px; font-size:16px; }
-.btn-outline { background:transparent; color:var(--white); border:1px solid rgba(255,255,255,0.12); padding:10px 16px; border-radius:10px; cursor:pointer; }
+.heroLeft {
+  max-width: 520px;
+}
 
-/* right */
-.landingRight img { width:360px; transform:rotate(-12deg); }
+.heroTitle {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.15;
+}
 
-/* Responsive */
-@media (max-width:900px){
-  .landingMainContainer{ flex-direction:column; text-align:center; gap:20px; }
-  .landingRight img{ width:280px; transform:none; }
-  .landingLeft h1{ font-size:34px; }
+.colorBlue   { color: #00a9ff; }
+.colorPurple { color: #b59cff; }
+.colorMango  { color: #ffb84d; }
+.colorNeon   { color: #0094ff; }
+
+.heroSubtitle {
+  margin-top: 18px;
+  font-size: 18px;
+  color: #333;
+  opacity: 0.8;
+}
+
+.heroButtons {
+  margin-top: 28px;
+  display: flex;
+  gap: 18px;
+}
+
+/* === BUTTONS (GEN-Z BUBBLE STYLE) === */
+.bubbleBtn {
+  padding: 14px 26px;
+  border-radius: 30px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.18s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+/* Primary Blue Button */
+.bubbleBtn.primary {
+  background: #00aaff;
+  color: white;
+}
+
+.bubbleBtn.primary:hover {
+  transform: scale(1.04);
+  box-shadow: 0 6px 22px rgba(0, 170, 255, 0.35);
+}
+
+/* White Button */
+.bubbleBtn.white,
+.bubbleBtn.outline {
+  background: white;
+  color: #333;
+}
+
+.bubbleBtn.outline:hover {
+  transform: scale(1.04);
+}
+
+/* === RIGHT ILLUSTRATION === */
+.heroRight {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 20px;
+}
+
+.heroIllustration {
+  width: 380px;
+  max-width: 100%;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Floating Animation */
+@keyframes float {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-12px); }
+  100% { transform: translateY(0px); }
+}
+
+/* === FLOATING BACKGROUND SHAPES === */
+.bgShape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.35;
+  filter: blur(40px);
+  z-index: -1;
+}
+
+.shape1 {
+  width: 220px;
+  height: 220px;
+  background: #ffc1e3;
+  top: 120px;
+  left: -40px;
+}
+
+.shape2 {
+  width: 320px;
+  height: 320px;
+  background: #c6d0ff;
+  bottom: 70px;
+  right: 30px;
+}
+
+.shape3 {
+  width: 180px;
+  height: 180px;
+  background: #afffe3;
+  bottom: 160px;
+  left: 40%;
 }

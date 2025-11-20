@@ -1,0 +1,134 @@
+/* WRAPPER */
+.joinWrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+
+  background: linear-gradient(to bottom, #dff3ff, #ffffff);
+  position: relative;
+  overflow: hidden;
+  font-family: "Poppins", sans-serif;
+}
+
+/* FLOATING SHAPES */
+.joinShape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.35;
+  filter: blur(45px);
+  z-index: -1;
+}
+
+.shapeA {
+  width: 260px;
+  height: 260px;
+  background: #ffc3e8;
+  top: 10%;
+  left: -80px;
+}
+
+.shapeB {
+  width: 300px;
+  height: 300px;
+  background: #bfc8ff;
+  bottom: 8%;
+  right: -60px;
+}
+
+.shapeC {
+  width: 180px;
+  height: 180px;
+  background: #b4ffe7;
+  top: 63%;
+  left: 45%;
+}
+
+/* JOIN CARD */
+.joinCard {
+  width: 380px;
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 22px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.joinCard h2 {
+  margin: 0;
+  margin-bottom: 10px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #222;
+}
+
+.joinDesc {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 22px;
+}
+
+/* INPUT */
+.joinInput {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1.4px solid #d0d8e2;
+  background: #f8fbff;
+  font-size: 15px;
+  outline: none;
+  transition: 0.18s;
+}
+
+.joinInput:focus {
+  border-color: #00a9ff;
+  box-shadow: 0 0 0 4px rgba(0,170,255,0.15);
+}
+
+/* BUTTON ROW */
+.joinButtons {
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+/* BUBBLE BUTTONS (REUSE FROM LANDING) */
+.bubbleBtn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.18s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.bubbleBtn.primary {
+  background: #00a9ff;
+  color: white;
+}
+
+.bubbleBtn.primary:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 22px rgba(0,170,255,0.35);
+}
+
+.bubbleBtn.outline {
+  background: white;
+  border: 1.5px solid #d1d8e0;
+  color: #444;
+}
+
+.bubbleBtn.outline:hover {
+  transform: scale(1.04);
+}
+
+/* TIP TEXT */
+.tipText {
+  margin-top: 18px;
+  color: #666;
+  font-size: 12px;
+}
