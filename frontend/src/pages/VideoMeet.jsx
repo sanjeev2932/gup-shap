@@ -7,39 +7,6 @@ import "../styles/videoMeetOverrides.css";
 
 const SIGNAL_SERVER = "https://gup-shapbackend.onrender.com";
 
-/* ----------------------------------------------------
-   ACTIVE SPEAKER ANALYSER
----------------------------------------------------- */
-function createAudioAnalyser(stream, peerId) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = ctx.createAnalyser();
-    const source = ctx.createMediaStreamSource(stream);
-
-    analyser.fftSize = 256;
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    source.connect(analyser);
-
-    function detect() {
-      analyser.getByteFrequencyData(dataArray);
-      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-
-      const tile = document.querySelector(`[data-wrap="${peerId}"]`);
-      if (tile) {
-        if (avg > 55) tile.classList.add("active");
-        else tile.classList.remove("active");
-      }
-
-      requestAnimationFrame(detect);
-    }
-
-    detect();
-  } catch (err) {
-    console.warn("Audio analyser failed:", err);
-  }
-}
-
 export default function VideoMeet() {
   const localRef = useRef();
   const peersRef = useRef({});
@@ -54,41 +21,31 @@ export default function VideoMeet() {
   const [isHost, setIsHost] = useState(false);
   const [toast, setToast] = useState("");
 
-  const audioCtxRef = useRef(null);
-
-  /* ----------------------------------------------------
-     SMALL "DING" JOIN SOUND
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // SOUND DING
+  // ----------------------------------------------------
   function playDing() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-
       osc.type = "sine";
       osc.frequency.setValueAtTime(880, ctx.currentTime);
-
       gain.gain.setValueAtTime(0.0001, ctx.currentTime);
       gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
-
       osc.connect(gain);
       gain.connect(ctx.destination);
-
       osc.start();
       gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
-
       setTimeout(() => {
-        try {
-          osc.stop();
-          ctx.close();
-        } catch {}
+        try { osc.stop(); ctx.close(); } catch {}
       }, 150);
     } catch {}
   }
 
-  /* ----------------------------------------------------
-     MAIN EFFECT
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // MAIN EFFECT
+  // ----------------------------------------------------
   useEffect(() => {
     const id = window.location.pathname.replace("/", "") || "lobby";
     setRoomId(id);
@@ -96,16 +53,14 @@ export default function VideoMeet() {
     socketRef.current = io(SIGNAL_SERVER, { transports: ["websocket"] });
 
     socketRef.current.on("connect", () => {
-      const username = localStorage?.user
-        ? JSON.parse(localStorage.user).name
-        : "Guest";
+      const username = localStorage?.user ? JSON.parse(localStorage.user).name : "Guest";
       socketRef.current.emit("join-request", { room: id, username });
     });
 
+    // standard join/approval/members flows
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
       setIsHost(Boolean(payload.isHost));
-
       await startLocalMedia(payload.members || []);
       showToast("You joined the room");
     });
@@ -121,17 +76,39 @@ export default function VideoMeet() {
     });
 
     socketRef.current.on("members", (m) => {
-      setParticipants(m || []);
+      // replace participants array — keep pending flags in sync
+      setParticipants((prev) => {
+        // preserve any pending flags for those ids that still exist
+        const pendingMap = {};
+        prev.forEach(p => { if (p.pending) pendingMap[p.id] = true; });
+        const newMembers = (m || []).map(x => ({ ...x, pending: false }));
+        // reapply pending if id still there and was pending
+        return newMembers.map(n => ({ ...n, pending: pendingMap[n.id] || false }));
+      });
     });
 
-    // 🔔 Ding on join
+    // When new user joins who is already approved
     socketRef.current.on("user-joined", ({ username }) => {
       playDing();
       showToast(`${username || "User"} joined`);
       socketRef.current.emit("get-members", { room: id });
     });
 
-    /* ------------ SIGNALS ------------ */
+    // NEW: host receives a lobby request
+    socketRef.current.on("lobby-request", ({ id: reqId, username }) => {
+      // Add pending entry only if not already present
+      setParticipants(prev => {
+        const exists = prev.find(p => p.id === reqId);
+        if (exists) {
+          // if exists but not pending, mark pending
+          return prev.map(p => p.id === reqId ? { ...p, pending: true } : p);
+        }
+        return [...prev, { id: reqId, username, pending: true }];
+      });
+      showToast(`${username || reqId} requested to join`);
+    });
+
+    // signaling & ice
     socketRef.current.on("signal", async ({ from, type, data }) => {
       if (type === "offer") await handleOffer(from, data);
       else if (type === "answer") {
@@ -143,71 +120,39 @@ export default function VideoMeet() {
       }
     });
 
-    /* ------------ RAISED HAND ------------ */
     socketRef.current.on("raise-hand", ({ from, username }) => {
       showToast(`${username || from} raised hand`);
-
-      setParticipants((prev) =>
-        prev.map((p) =>
-          p.id === from ? { ...p, raised: true } : p
-        )
-      );
-
-      // 🔥 VISUAL RAISED HAND POP BADGE
-      const tile = document.querySelector(`[data-wrap="${from}"]`);
-      if (tile) {
-        const badge = tile.querySelector(".raisedBadge");
-        if (badge) {
-          badge.style.display = "block";
-          setTimeout(() => {
-            badge.style.display = "none";
-          }, 6000);
-        }
-      }
-
-      // remove raised-hand state
+      setParticipants(prev => prev.map(p => p.id === from ? { ...p, raised: true } : p));
       setTimeout(() => {
-        setParticipants((prev) =>
-          prev.map((p) =>
-            p.id === from ? { ...p, raised: false } : p
-          )
-        );
+        setParticipants(prev => prev.map(p => p.id === from ? { ...p, raised: false } : p));
       }, 6000);
     });
 
-    /* ------------ USER LEFT ------------ */
     socketRef.current.on("user-left", ({ id: leftId }) => {
       const pc = peersRef.current[leftId];
       if (pc) {
         try { pc.close(); } catch {}
         delete peersRef.current[leftId];
       }
-
-      setParticipants((prev) => prev.filter((p) => p.id !== leftId));
-
+      setParticipants(prev => prev.filter(p => p.id !== leftId));
       const el = document.querySelector(`[data-peer="${leftId}"]`);
       if (el && el.parentNode) el.parentNode.remove();
     });
 
     return () => cleanup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ----------------------------------------------------
-     LOCAL MEDIA
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // LOCAL MEDIA
+  // ----------------------------------------------------
   async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: camOn,
-          audio: micOn,
-        });
+        // ALWAYS ask both audio/video to trigger permission dialog on browsers
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStreamRef.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
-
-        // 🔥 Local active speaker detection
-        createAudioAnalyser(stream, socketRef.current.id);
-
       } catch (e) {
         showToast("Camera/Mic permission denied");
         return;
@@ -222,29 +167,20 @@ export default function VideoMeet() {
     }
   }
 
-  /* ----------------------------------------------------
-     PEER CREATION
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // PEER CREATION
+  // ----------------------------------------------------
   async function createPeerAndOffer(remoteId) {
     if (peersRef.current[remoteId]) return;
 
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
     peersRef.current[remoteId] = pc;
 
-    localStreamRef.current?.getTracks().forEach((track) =>
-      pc.addTrack(track, localStreamRef.current)
-    );
+    localStreamRef.current?.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        socketRef.current.emit("signal", {
-          to: remoteId,
-          type: "candidate",
-          data: e.candidate,
-        });
+        socketRef.current.emit("signal", { to: remoteId, type: "candidate", data: e.candidate });
       }
     };
 
@@ -252,54 +188,31 @@ export default function VideoMeet() {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-
-    socketRef.current.emit("signal", {
-      to: remoteId,
-      type: "offer",
-      data: offer,
-    });
+    socketRef.current.emit("signal", { to: remoteId, type: "offer", data: offer });
   }
 
   async function handleOffer(from, offer) {
     let pc = peersRef.current[from];
 
     if (!pc) {
-      pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      });
-
+      pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
       peersRef.current[from] = pc;
-
-      localStreamRef.current?.getTracks().forEach((track) =>
-        pc.addTrack(track, localStreamRef.current)
-      );
-
+      localStreamRef.current?.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
       pc.onicecandidate = (e) => {
-        if (e.candidate)
-          socketRef.current.emit("signal", {
-            to: from,
-            type: "candidate",
-            data: e.candidate,
-          });
+        if (e.candidate) socketRef.current.emit("signal", { to: from, type: "candidate", data: e.candidate });
       };
-
       pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
     }
 
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-
-    socketRef.current.emit("signal", {
-      to: from,
-      type: "answer",
-      data: answer,
-    });
+    socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
   }
 
-  /* ----------------------------------------------------
-     REMOTE STREAM
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // REMOTE STREAM
+  // ----------------------------------------------------
   function attachRemoteStream(peerId, stream) {
     setParticipants((prev) => {
       if (!prev.find((p) => p.id === peerId)) {
@@ -344,66 +257,87 @@ export default function VideoMeet() {
     } catch {
       vid.src = URL.createObjectURL(stream);
     }
-
-    /* 🔥 Enable active speaker detection for REMOTE users */
-    createAudioAnalyser(stream, peerId);
   }
 
-  /* ----------------------------------------------------
-     TOAST
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // TOAST
+  // ----------------------------------------------------
   function showToast(msg, t = 3000) {
     setToast(msg);
     setTimeout(() => setToast(""), t);
   }
 
-  /* ----------------------------------------------------
-     CONTROLS
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // CONTROLS
+  // ----------------------------------------------------
   const toggleMic = () => {
     if (!localStreamRef.current) return;
     const tr = localStreamRef.current.getAudioTracks();
     if (!tr.length) return;
-
     tr.forEach((t) => (t.enabled = !t.enabled));
     setMicOn(tr[0].enabled);
+    // notify peers (optional)
+    socketRef.current.emit("media-update", { room: roomId, mic: tr[0].enabled });
   };
 
   const toggleCam = () => {
     if (!localStreamRef.current) return;
     const tr = localStreamRef.current.getVideoTracks();
     if (!tr.length) return;
-
     tr.forEach((t) => (t.enabled = !t.enabled));
     setCamOn(tr[0].enabled);
+    socketRef.current.emit("media-update", { room: roomId, cam: tr[0].enabled });
   };
 
+  // NEW: toggle screen share properly
   const startScreenShare = async () => {
+    if (!localStreamRef.current) {
+      showToast("Local media not started");
+      return;
+    }
+
+    if (isSharingScreen) {
+      // STOP sharing: replace with camera track
+      const camTrack = localStreamRef.current.getVideoTracks()[0];
+      if (!camTrack) return;
+
+      Object.values(peersRef.current).forEach((pc) => {
+        const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+        if (sender) sender.replaceTrack(camTrack);
+      });
+
+      if (localRef.current) localRef.current.srcObject = localStreamRef.current;
+      setIsSharingScreen(false);
+      return;
+    }
+
+    // START sharing
     try {
       const disp = await navigator.mediaDevices.getDisplayMedia({ video: true });
       const track = disp.getVideoTracks()[0];
+      if (!track) return;
 
       Object.values(peersRef.current).forEach((pc) => {
         const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
         if (sender) sender.replaceTrack(track);
       });
 
-      localRef.current.srcObject = disp;
+      if (localRef.current) localRef.current.srcObject = disp;
       setIsSharingScreen(true);
 
       track.onended = () => {
-        if (localStreamRef.current) {
-          localRef.current.srcObject = localStreamRef.current;
-
-          Object.values(peersRef.current).forEach((pc) => {
-            const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
-            if (sender)
-              sender.replaceTrack(localStreamRef.current.getVideoTracks()[0]);
-          });
-        }
+        // restore camera when screen sharing ends from browser UI
+        const camTrack = localStreamRef.current?.getVideoTracks()[0];
+        Object.values(peersRef.current).forEach((pc) => {
+          const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+          if (sender && camTrack) sender.replaceTrack(camTrack);
+        });
+        if (localRef.current && localStreamRef.current) localRef.current.srcObject = localStreamRef.current;
         setIsSharingScreen(false);
       };
-    } catch (e) {}
+    } catch (e) {
+      console.log("Screen share cancelled or failed", e);
+    }
   };
 
   const endCall = () => {
@@ -418,38 +352,28 @@ export default function VideoMeet() {
 
   const approveParticipant = (userId) => {
     socketRef.current.emit("approve-join", { room: roomId, userId });
+    // optimistic UI: mark approved -> remove pending flag (host clicked)
+    setParticipants(prev => prev.map(p => p.id === userId ? { ...p, pending: false } : p));
   };
 
-  /* ----------------------------------------------------
-     CLEANUP
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // CLEANUP
+  // ----------------------------------------------------
   function cleanup() {
-    try {
-      socketRef.current.disconnect();
-    } catch {}
-
-    try {
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-    } catch {}
-
-    Object.values(peersRef.current).forEach((pc) => {
-      try {
-        pc.close();
-      } catch {}
-    });
-
+    try { socketRef.current.disconnect(); } catch {}
+    try { localStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
+    Object.values(peersRef.current).forEach((pc) => { try { pc.close(); } catch {} });
     peersRef.current = {};
   }
 
-  /* ----------------------------------------------------
-     RENDER
-  ---------------------------------------------------- */
+  // ----------------------------------------------------
+  // RENDER
+  // ----------------------------------------------------
   return (
     <div className="video-container">
       <div className="topbar">
         <div className="roomLabel">
-          Gup-Shap — Room:
-          <span className="roomId">{roomId}</span>
+          Gup-Shap — Room: <span className="roomId">{roomId}</span>
         </div>
 
         <div className="statusBadges">
@@ -462,17 +386,9 @@ export default function VideoMeet() {
         <div id="remote-videos" className="remoteGrid"></div>
 
         <div className="localFloating">
-          <video
-            ref={localRef}
-            autoPlay
-            muted
-            playsInline
-            className="localVideo"
-          />
+          <video ref={localRef} autoPlay muted playsInline className="localVideo" />
           <div className="localLabel">
-            {localStorage?.user
-              ? JSON.parse(localStorage.user).name
-              : "You"}
+            {localStorage?.user ? JSON.parse(localStorage.user).name : "You"}
           </div>
         </div>
       </div>

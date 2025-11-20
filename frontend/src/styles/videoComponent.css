@@ -1,157 +1,106 @@
-/* videoComponent.css - participant tiles, local video, grid */
+/* frontend/src/styles/videoComponent.css */
 
 .video-container {
-  min-height: calc(100vh - 90px);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg,#dff3ff,#ffffff);
-  font-family: "Poppins", sans-serif;
-  color: #0d2533;
+  background: linear-gradient(180deg,#eaf8ff 0%, #ffffff 100%);
+  color: #0d2130;
+  position: relative;
 }
 
-/* Topbar (kept simple; overrides in videoMeetOverrides.css) */
+/* topbar */
 .topbar {
-  width: 100%;
+  padding: 12px 22px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 28px;
-  box-sizing: border-box;
 }
 
-/* Video stage layout */
+.roomLabel { font-size: 14px; color: #123; }
+.statusBadges { display:flex; gap:10px; align-items:center; }
+.hostBadge, .countBadge {
+  background: #e9fbdf; color: #226b19; padding:6px 10px; border-radius:14px; font-size:12px;
+}
+
+/* video stage */
 .videoStage {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
-  padding: 18px 28px 90px 28px; /* keep space for controls */
-  box-sizing: border-box;
   position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-height: calc(100vh - 120px);
+  overflow: hidden;
 }
 
-/* Remote grid: responsive card grid */
+/* remote grid */
 .remoteGrid {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
-  align-items: stretch;
+  padding: 36px;
+  align-items: start;
+  justify-items: center;
+  min-height: 60vh; /* ensures it doesn't collapse when empty */
 }
 
-/* Participant tile */
+/* participant tile */
 .participantTile {
-  background: #ffffff;
-  border-radius: 18px;
+  width: 320px;
+  height: 200px;
+  border-radius: 12px;
   overflow: hidden;
-  position: relative;
-  min-height: 140px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  box-shadow: 0 14px 36px rgba(2,30,60,0.06);
-  border: 1px solid rgba(10,30,60,0.03);
+  background: rgba(255,255,255,0.8);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+  box-shadow: 0 8px 24px rgba(13,36,50,0.08);
+}
+.remoteVideoEl {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:#000;
 }
 
-/* Video element inside tile */
-.remoteVideoEl,
-.localVideo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  background: linear-gradient(180deg,#e9f7ff,#ffffff);
-}
-
-/* Tile label overlay */
-.tileLabel {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(3px);
-  font-weight: 700;
-  font-size: 13px;
-  color: #233b4a;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-}
-
-/* Raised badge */
-.raisedBadge {
-  position: absolute;
-  right: 12px;
-  bottom: 10px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.9);
-  font-weight: 800;
-  color: #ff6b6b;
-  display: none;
-}
-
-/* If participant has raised property we will toggle display via inline style in code (existing) */
-
-/* Local floating tile (bottom-right small preview) */
+/* local floating preview */
 .localFloating {
   position: fixed;
+  bottom: 28px;
   right: 28px;
-  bottom: 120px;
-  width: 190px;
-  height: 120px;
-  border-radius: 14px;
+  width: 180px;
+  height: 110px;
+  border-radius: 12px;
   overflow: hidden;
-  background: white;
-  box-shadow: 0 18px 38px rgba(2,30,60,0.12);
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  flex-direction: column;
-  z-index: 30;
-  border: 1px solid rgba(10,30,60,0.03);
+  box-shadow: 0 14px 36px rgba(10,30,40,0.12);
+  background: linear-gradient(180deg, #fff, #f2f8ff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 60;
 }
+.localVideo { width:100%; height:100%; object-fit:cover; transform: none; border-radius: 12px; }
+.localLabel { position:absolute; left:12px; bottom:8px; font-size:12px; color:#1a3; }
 
-/* Local label at bottom of preview */
-.localLabel {
-  padding: 8px 10px;
-  width: 100%;
-  background: linear-gradient(to top, rgba(255,255,255,0.92), rgba(255,255,255,0.6));
-  font-weight: 700;
-  font-size: 13px;
-  color: #0e2b3a;
-}
-
-/* Toast */
+/* toast */
 .toast {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 36px;
-  background: rgba(30,40,60,0.95);
-  color: white;
+  bottom: 120px;
+  background: rgba(10,20,30,0.9);
+  color: #fff;
   padding: 10px 16px;
-  border-radius: 12px;
-  z-index: 120;
-  font-weight: 700;
-  box-shadow: 0 10px 30px rgba(2,30,60,0.2);
+  border-radius: 8px;
+  z-index: 100;
 }
 
-/* Responsive: reduce local preview on small screens */
-@media (max-width: 880px) {
-  .localFloating {
-    width: 150px;
-    height: 100px;
-    right: 12px;
-    bottom: 100px;
-  }
-
-  .remoteGrid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .localLabel { display: none; }
-  .participantTile { border-radius: 12px; min-height: 110px; }
-}
+/* approvals box (CallControls) will sit near controls; keep basic styles to match current look */
+.approvals { margin-left: 16px; padding: 12px; background: #fff; border-radius: 10px; box-shadow: 0 10px 26px rgba(0,0,0,0.06); }
+.pendingItem { display:flex; justify-content:space-between; align-items:center; gap: 12px; padding: 8px 0; }
+.approveBtn { background:#1b7bff; color:#fff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
+.noPending { color:#666; font-size:13px; }
