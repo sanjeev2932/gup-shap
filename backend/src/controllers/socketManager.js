@@ -3,52 +3,74 @@ import { Server } from "socket.io";
 
 export function connectToSocket(server) {
   const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST", "PUT", "DELETE"],
+    },
+    pingTimeout: 20000,
+    pingInterval: 25000,
   });
 
-  // room structure
   const rooms = {};
+
   io.on("connection", (socket) => {
-    console.log("socket connected", socket.id);
+    console.log("socket connected:", socket.id);
 
     socket.on("join-request", ({ room, username }) => {
       username = username || socket.id;
-      if (!rooms[room]) rooms[room] = { hostId: null, members: [], pending: [] };
+
+      if (!rooms[room])
+        rooms[room] = { hostId: null, members: [], pending: [] };
+
       const state = rooms[room];
 
-      // if no host set, make this socket host and join immediately
+      // Make first user host
       if (!state.hostId) {
         state.hostId = socket.id;
         state.members.push({ id: socket.id, username, mic: true, cam: true });
+
         socket.join(room);
         socket.emit("joined", { members: state.members, isHost: true });
         io.to(room).emit("members", state.members);
         return;
       }
 
-      // otherwise push to pending lobby and notify host
+      // Others → pending
       state.pending.push({ id: socket.id, username });
-      rooms[room] = state;
-      io.to(state.hostId).emit("lobby-request", { id: socket.id, username });
+      io.to(state.hostId).emit("lobby-request", {
+        id: socket.id,
+        username,
+      });
+
       socket.emit("lobby-wait", { hostId: state.hostId });
     });
 
     socket.on("approve-join", ({ room, userId }) => {
       const state = rooms[room];
-      if (!state) return;
-      if (socket.id !== state.hostId) return;
+      if (!state || socket.id !== state.hostId) return;
 
-      const idx = state.pending.findIndex(p => p.id === userId);
+      const idx = state.pending.findIndex((p) => p.id === userId);
       if (idx === -1) return;
+
       const approved = state.pending.splice(idx, 1)[0];
 
-      // add to members and join socket to room
-      state.members.push({ id: approved.id, username: approved.username, mic: true, cam: true });
-      rooms[room] = state;
+      state.members.push({
+        id: approved.id,
+        username: approved.username,
+        mic: true,
+        cam: true,
+      });
 
-      io.to(approved.id).emit("approved", { members: state.members, isHost: false });
+      io.to(approved.id).emit("approved", {
+        members: state.members,
+        isHost: false,
+      });
+
       io.to(room).emit("members", state.members);
-      io.to(room).emit("user-joined", { id: approved.id, username: approved.username });
+      io.to(room).emit("user-joined", {
+        id: approved.id,
+        username: approved.username,
+      });
     });
 
     socket.on("get-members", ({ room }) => {
@@ -57,48 +79,71 @@ export function connectToSocket(server) {
     });
 
     socket.on("signal", ({ to, type, data }) => {
-      if (!to) return;
-      io.to(to).emit("signal", { from: socket.id, type, data });
+      io.to(to).emit("signal", {
+        from: socket.id,
+        type,
+        data,
+      });
     });
 
     socket.on("media-update", ({ room, mic, cam }) => {
       const state = rooms[room];
       if (!state) return;
-      const m = state.members.find(x => x.id === socket.id);
+
+      const m = state.members.find((x) => x.id === socket.id);
       if (m) {
         if (typeof mic === "boolean") m.mic = mic;
         if (typeof cam === "boolean") m.cam = cam;
       }
+
       io.to(room).emit("members", state.members);
     });
 
-    socket.on("raise-hand", ({ room, raised }) => {
+    socket.on("raise-hand", ({ room }) => {
       const state = rooms[room];
       if (!state) return;
-      const username = (state.members.find(m => m.id === socket.id) || {}).username || socket.id;
-      io.to(room).emit("raise-hand", { from: socket.id, username, raised });
+
+      const username =
+        state.members.find((m) => m.id === socket.id)?.username || socket.id;
+
+      io.to(room).emit("raise-hand", {
+        from: socket.id,
+        username,
+      });
     });
 
     socket.on("disconnect", () => {
-      for (const room in rooms) {
-        const st = rooms[room];
-        if (!st) continue;
+      console.log("socket disconnected:", socket.id);
 
-        const memIdx = st.members.findIndex(m => m.id === socket.id);
+      for (const room in rooms) {
+        const state = rooms[room];
+        if (!state) continue;
+
+        const memIdx = state.members.findIndex((m) => m.id === socket.id);
+
         if (memIdx !== -1) {
-          const left = st.members.splice(memIdx, 1)[0];
+          const left = state.members.splice(memIdx, 1)[0];
+
           io.to(room).emit("user-left", { id: left.id });
-          io.to(room).emit("members", st.members);
-          if (st.hostId === socket.id) {
-            st.hostId = st.members.length ? st.members[0].id : null;
-            if (st.hostId) io.to(st.hostId).emit("promoted-host");
+          io.to(room).emit("members", state.members);
+
+          // Host left → promote new host
+          if (state.hostId === socket.id) {
+            state.hostId = state.members.length
+              ? state.members[0].id
+              : null;
+
+            if (state.hostId)
+              io.to(state.hostId).emit("promoted-host");
           }
         }
 
-        const pendingIdx = st.pending.findIndex(p => p.id === socket.id);
-        if (pendingIdx !== -1) st.pending.splice(pendingIdx, 1);
+        // Remove from pending if leaving
+        const pendingIdx = state.pending.findIndex(
+          (p) => p.id === socket.id
+        );
+        if (pendingIdx !== -1) state.pending.splice(pendingIdx, 1);
       }
-      console.log("socket disconnected", socket.id);
     });
   });
 

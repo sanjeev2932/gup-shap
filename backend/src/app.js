@@ -5,12 +5,13 @@ import mongoose from "mongoose";
 import cors from "cors";
 import userRoutes from "./routes/users.routes.js";
 import { connectToSocket } from "./controllers/socketManager.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
-// ---------------------------
-// CORS FIX for Render + Vercel/Netlify
-// ---------------------------
+// -------- CORS FIX --------
 app.use(
   cors({
     origin: "*",
@@ -20,32 +21,21 @@ app.use(
 
 app.use(express.json());
 
-// ---------------------------
-// API ROUTES
-// ---------------------------
+// -------- ROUTES --------
 app.use("/api/v1/users", userRoutes);
 
-// ---------------------------
-// HEALTH CHECK (Fix for 503 error)
-// ---------------------------
+// -------- HEALTH CHECK --------
 app.get("/", (req, res) => {
-  res.send("Gup-Shap Backend is running ✅");
+  res.send("Gup-Shap Backend running ✅");
 });
 
-// ---------------------------
-// SERVER + SOCKET
-// ---------------------------
+// -------- SERVER --------
 const server = createServer(app);
 
-// Important: allow socket.io to stay alive on Render
-const io = connectToSocket(server, {
-  pingTimeout: 20000,
-  pingInterval: 25000,
-});
+// -------- SOCKET.IO --------
+connectToSocket(server); // FIX: removed invalid args
 
-// ---------------------------
-// PORT FIX for Render
-// ---------------------------
+// -------- PORT --------
 const PORT = process.env.PORT || 8000;
 
 async function start() {
@@ -54,14 +44,14 @@ async function start() {
       await mongoose.connect(process.env.MONGO_URI);
       console.log("Connected to MongoDB");
     } else {
-      console.log("MONGO_URI not set — running without DB");
+      console.log("⚠ MONGO_URI missing — running without database");
     }
 
     server.listen(PORT, () => {
-      console.log(`Backend running on PORT ${PORT}`);
+      console.log("Backend started on PORT", PORT);
     });
   } catch (err) {
-    console.error("Backend failed to start:", err);
+    console.error("❌ Backend crash", err);
     process.exit(1);
   }
 }
