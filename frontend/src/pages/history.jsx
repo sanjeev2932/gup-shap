@@ -1,4 +1,3 @@
-// frontend/src/pages/history.jsx
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import "../styles/history.css";
@@ -11,15 +10,13 @@ export default function History() {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const data = await getUserHistory();  // must return an array
-        setHistory(data || []);
-      } catch (err) {
-        console.error("Failed to fetch history:", err);
+        const data = await getUserHistory();
+        setHistory(Array.isArray(data) ? data : []);
+      } catch {
         setHistory([]);
       }
       setLoading(false);
     };
-
     loadHistory();
   }, [getUserHistory]);
 
@@ -33,10 +30,10 @@ export default function History() {
         <p className="emptyHistory">No previous meetings found.</p>
       ) : (
         <ul className="historyList">
-          {history.map((item, index) => (
-            <li key={index} className="historyItem">
+          {history.map((item, i) => (
+            <li key={i} className="historyItem">
               <span className="label">Meeting Code:</span>{" "}
-              {item.meetingCode || item.roomId || item.code}
+              {item.meetingCode || item.roomId || item.code || "Unknown"}
             </li>
           ))}
         </ul>
