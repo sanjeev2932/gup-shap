@@ -1,0 +1,131 @@
+/* Light Blue BG */
+.meet-cute-bg, .meet-page-cute {
+  background: linear-gradient(120deg, #e3f0ff 0%, #f5fafd 100%);
+  min-height: 100vh;
+  width: 100vw;
+}
+
+/* Center pre-join screen */
+.meet-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  flex-direction: column;
+}
+
+/* Cute Button */
+.meet-cute-btn {
+  padding: 14px 32px;
+  font-size: 22px;
+  border-radius: 16px;
+  background: #6edcfb;
+  color: #1b2461;
+  border: none;
+  font-weight: bold;
+  box-shadow: 0 2px 22px rgba(50,180,255,0.10);
+  cursor: pointer;
+  transition: background 0.22s;
+}
+.meet-cute-btn:hover { background: #bfe6f7; }
+
+.topbar {
+  padding: 28px 38px 0 38px;
+  color: #324060;
+  font-weight: 600;
+}
+
+.roomLabel { font-size: 22px; font-family: 'Nunito', 'Montserrat', sans-serif; }
+.countBadge { font-size: 16px; color: #7fa2d1; background: #fff3; padding: 3px 18px; border-radius: 32px; }
+
+/* Video stage grid */
+.videoStageCute {
+  width: 100vw;
+  height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.videoGridCute {
+  display: flex;
+  gap: 2.8vw;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  min-height: 350px;
+  margin-top: 45px;
+}
+
+/* Single participant: center & big */
+.singleStage .videoGridCute {
+  justify-content: center;
+  align-items: center;
+}
+
+.singleStage .participantTile {
+  width: 520px !important;
+  height: 340px !important;
+  margin: 0 auto;
+  border-radius: 36px;
+  border-width: 8px;
+  border-color: #fff8e8 !important;
+  background: #daf2ff;
+  box-shadow: 0 10px 64px 5px #aeeff9;
+}
+
+/* Multiple: equal */
+.videoGridCute .participantTile {
+  width: 340px;
+  height: 210px;
+  border-radius: 28px;
+  border-width: 7px;
+  border-color: #f9efef !important;
+  background: #e8f3fc;
+  box-shadow: 0 3px 18px rgb(160 210 255 / 20%);
+}
+
+/* Speaking: glow & grow */
+.participantTile.active {
+  box-shadow: 0 8px 48px 0px #8befff, 0 4px 24px #1bb1ff33;
+  border-color: #ffeccb !important;
+  transform: scale(2.00);
+  z-index: 6;
+  transition: transform 0.4s, box-shadow 0.3s;
+}
+
+/* Presenting: shrink all */
+.presentingStage .participantTile {
+  width: 180px !important;
+  height: 90px !important;
+  opacity: 0.82 !important;
+  border-radius: 15px !important;
+}
+
+/* Remote/local video styling */
+.remoteVideoEl, .localVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  background: #000;
+}
+
+.tileLabel {
+  position: absolute;
+  bottom: 14px;
+  left: 16px;
+  background: #56aefc88;
+  color: #fff;
+  padding: 7px 18px;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+
+@media(max-width:900px) {
+  .singleStage .participantTile, .videoGridCute .participantTile { width: 96vw !important; height: 220px !important; }
+  .tileLabel { font-size: 13px; }
+}
