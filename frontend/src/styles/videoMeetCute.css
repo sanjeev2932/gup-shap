@@ -1,131 +1,100 @@
-/* Light Blue BG */
+/* Sky blue bg gradient */
 .meet-cute-bg, .meet-page-cute {
-  background: linear-gradient(120deg, #e3f0ff 0%, #f5fafd 100%);
   min-height: 100vh;
   width: 100vw;
+  background: linear-gradient(128deg, #d6e9ff 0%, #ebf6fc 100%);
+  position: relative;
 }
 
-/* Center pre-join screen */
-.meet-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  flex-direction: column;
-}
-
-/* Cute Button */
-.meet-cute-btn {
-  padding: 14px 32px;
-  font-size: 22px;
-  border-radius: 16px;
-  background: #6edcfb;
-  color: #1b2461;
-  border: none;
-  font-weight: bold;
-  box-shadow: 0 2px 22px rgba(50,180,255,0.10);
-  cursor: pointer;
-  transition: background 0.22s;
-}
-.meet-cute-btn:hover { background: #bfe6f7; }
-
+/* Topbar styling */
 .topbar {
-  padding: 28px 38px 0 38px;
+  padding: 24px 36px 0 36px;
   color: #324060;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 21px;
 }
 
-.roomLabel { font-size: 22px; font-family: 'Nunito', 'Montserrat', sans-serif; }
-.countBadge { font-size: 16px; color: #7fa2d1; background: #fff3; padding: 3px 18px; border-radius: 32px; }
-
-/* Video stage grid */
-.videoStageCute {
-  width: 100vw;
-  height: calc(100vh - 120px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.videoGridCute {
-  display: flex;
-  gap: 2.8vw;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  min-height: 350px;
-  margin-top: 45px;
-}
-
-/* Single participant: center & big */
+/* Layout centering for single participant */
 .singleStage .videoGridCute {
   justify-content: center;
   align-items: center;
 }
 
+/* Main participant tile: super rounded, thick border, pastel shadow */
 .singleStage .participantTile {
-  width: 520px !important;
+  width: 530px !important;
   height: 340px !important;
   margin: 0 auto;
-  border-radius: 36px;
-  border-width: 8px;
-  border-color: #fff8e8 !important;
-  background: #daf2ff;
-  box-shadow: 0 10px 64px 5px #aeeff9;
+  border-radius: 40px;
+  border: 10px solid #ffe8f2 !important;
+  background: #eaf9ff;
+  box-shadow: 0 10px 70px 8px #bae6fdcc;
+  transition: border-color 0.35s, box-shadow 0.3s;
 }
 
-/* Multiple: equal */
+/* Multi-user equal tiles */
 .videoGridCute .participantTile {
-  width: 340px;
-  height: 210px;
-  border-radius: 28px;
-  border-width: 7px;
-  border-color: #f9efef !important;
-  background: #e8f3fc;
+  width: 330px;
+  height: 200px;
+  border-radius: 26px;
+  border: 7px solid #fbe8ed !important;
+  background: #e8f5fd;
   box-shadow: 0 3px 18px rgb(160 210 255 / 20%);
 }
 
-/* Speaking: glow & grow */
+/* Speaking: glow and 2x grow! */
 .participantTile.active {
-  box-shadow: 0 8px 48px 0px #8befff, 0 4px 24px #1bb1ff33;
-  border-color: #ffeccb !important;
-  transform: scale(2.00);
+  box-shadow: 0 12px 80px 2px #abdefb, 0 4px 36px #ffd6f655;
+  border-color: #fff8dd !important;
+  transform: scale(2.0);
   z-index: 6;
-  transition: transform 0.4s, box-shadow 0.3s;
+  transition: transform 0.4s, box-shadow 0.3s, border-color 0.3s;
+  background: #e4fafe !important;
 }
 
-/* Presenting: shrink all */
+/* Presenting: shrink all tiles to let screen be big */
 .presentingStage .participantTile {
-  width: 180px !important;
+  width: 160px !important;
   height: 90px !important;
-  opacity: 0.82 !important;
-  border-radius: 15px !important;
+  opacity: 0.80 !important;
+  border-radius: 13px !important;
+  border-width: 6px !important;
 }
 
-/* Remote/local video styling */
+/* Video element inside tile */
 .remoteVideoEl, .localVideo {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
-  background: #000;
+  background: #f8fbff;
+  box-shadow: none;
 }
 
+/* Username label, pill pastel */
 .tileLabel {
   position: absolute;
   bottom: 14px;
-  left: 16px;
-  background: #56aefc88;
-  color: #fff;
-  padding: 7px 18px;
-  border-radius: 18px;
-  font-size: 16px;
+  left: 20px;
+  background: #8acaffcc;
+  color: #563f6a;
+  padding: 9px 24px;
+  border-radius: 22px;
+  font-size: 18px;
   font-weight: 600;
-  backdrop-filter: blur(6px);
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 12px 2px #aee3ffc8;
+  backdrop-filter: blur(3.5px);
+  border: 2px solid #e5cadb;
 }
 
+/* Side badges/pin/hand remain as before */
+
+/* BG responsive tweaks */
 @media(max-width:900px) {
-  .singleStage .participantTile, .videoGridCute .participantTile { width: 96vw !important; height: 220px !important; }
-  .tileLabel { font-size: 13px; }
+  .singleStage .participantTile, .videoGridCute .participantTile {
+    width: 95vw !important;
+    height: 190px !important;
+  }
+  .tileLabel { font-size: 14px; padding: 7px 12px; }
 }
