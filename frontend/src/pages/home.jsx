@@ -5,22 +5,20 @@ import "../styles/home.css";
 export default function Home() {
   const navigate = useNavigate();
   const [meetingCode, setMeetingCode] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
 
-  // Check for authentication — if not present, redirect to login
   useEffect(() => {
     document.body.classList.remove("dark-meeting");
     document.body.classList.add("light-mode");
 
     const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/auth#signin");
-    }
-  }, [navigate]);
+    setIsLoggedIn(!!token);
+  }, []);
 
+  // Meeting actions: require login, but do NOT redirect on page load
   const handleJoin = () => {
     const code = meetingCode.trim();
     if (!code) return alert("Enter a valid meeting code.");
-    // Check for token before join
     const token = localStorage.getItem("token");
     if (!token) {
       alert("You must sign in first.");
@@ -44,25 +42,32 @@ export default function Home() {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    setIsLoggedIn(false);
     navigate("/");
   };
 
+  const login = () => navigate("/auth#signin");
+  const register = () => navigate("/auth#signup");
+
   return (
     <div className="homePageContainer">
-
       {/* HEADER */}
       <header className="homeNav">
         <h2 className="logoText">Gup-Shap</h2>
         <div className="navRight">
-          <button className="historyBtn" onClick={() => navigate("/history")}>
-            History
-          </button>
-          <button className="logoutBtn" onClick={logout}>
-            Logout
-          </button>
+          {isLoggedIn ? (
+            <>
+              <button className="historyBtn" onClick={() => navigate("/history")}>History</button>
+              <button className="logoutBtn" onClick={logout}>Logout</button>
+            </>
+          ) : (
+            <>
+              <button className="loginBtn" onClick={login}>Login</button>
+              <button className="registerBtn" onClick={register}>Register</button>
+            </>
+          )}
         </div>
       </header>
-
       {/* MAIN */}
       <main className="homeMain">
         <div className="leftBlock">
@@ -79,21 +84,13 @@ export default function Home() {
               value={meetingCode}
               onChange={(e) => setMeetingCode(e.target.value)}
             />
-            <button className="btn-primary" onClick={handleJoin}>
-              Join
-            </button>
-            <button className="btn-secondary" onClick={createNew}>
-              New
-            </button>
+            <button className="btn-primary" onClick={handleJoin}>Join</button>
+            <button className="btn-secondary" onClick={createNew}>New</button>
           </div>
         </div>
         {/* RIGHT SIDE IMAGE */}
         <div className="rightBlock">
-          <img
-            src="/mobile.png"
-            className="homeImage"
-            alt="illustration"
-          />
+          <img src="/mobile.png" className="homeImage" alt="illustration" />
         </div>
       </main>
     </div>

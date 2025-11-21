@@ -6,7 +6,6 @@ import "../styles/videoComponent.css";
 import "../styles/videoMeetCute.css";
 import server from "../environment";
 
-// Dummy speaking logic (replace with real volume detection for production)
 const getSpeakingId = (participants) => participants[0]?.id || "";
 
 export default function VideoMeet() {
@@ -24,6 +23,11 @@ export default function VideoMeet() {
   const [toast, setToast] = useState("");
   const [ready, setReady] = useState(false);
   const [screenActive, setScreenActive] = useState(false);
+
+  // New: Approval
+  const [approvalRequired, setApprovalRequired] = useState(false);
+  const [approved, setApproved] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState([]); // {userId, username}
 
   function showToast(msg, t = 2500) {
     setToast(msg);
@@ -139,14 +143,59 @@ export default function VideoMeet() {
       socketRef.current.emit("join-request", { room, username });
     });
 
+    // Host: listen for join requests
+    socketRef.current.on("join-pending", ({ userId, username }) => {
+      setPendingRequests((reqs) => [...reqs, { userId, username }]);
+      setApprovalRequired(true);
+    });
+
+    // Guest: waiting for approval
+    socketRef.current.on("waiting-approval", ({ room }) => {
+      setApprovalRequired(true);
+      setApproved(false);
+      showToast("Waiting for Host Approval...");
+    });
+
+    // Guest: was approved by host
+    socketRef.current.on("approved", (payload) => {
+      setApprovalRequired(false);
+      setApproved(true);
+      setParticipants(payload.members || []);
+      showToast("You have been approved! Joining room...");
+      // Connect media/peers
+      for (const m of payload.members || []) {
+        if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
+          createPeerAndOffer(m.id);
+        }
+      }
+    });
+
+    // Guest: rejected by host
+    socketRef.current.on("rejected", ({ room }) => {
+      setApprovalRequired(false);
+      setApproved(false);
+      showToast("You were not approved.");
+      setTimeout(() => window.location.href = "/", 2200);
+    });
+
+    // Host: approve or reject via UI (handled below)
+    // Host: also mark themselves as approved instantly
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
+      if (payload.isHost) {
+        setApproved(true);
+        setApprovalRequired(false);
+        showToast("You joined as Host");
+      } else if (payload.approved) {
+        setApproved(true);
+        setApprovalRequired(false);
+        showToast("You joined the room");
+      }
       for (const m of payload.members || []) {
         if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
           await createPeerAndOffer(m.id);
         }
       }
-      showToast("You joined the room");
     });
 
     socketRef.current.on("members", (list) => {
@@ -190,6 +239,18 @@ export default function VideoMeet() {
   const speakingId = getSpeakingId(participants); // replace with real detection
   const single = tiles.length === 1;
 
+  // Host UI: approve/reject popups
+  function handleApprove(userId) {
+    socketRef.current.emit("approve-join", { room: roomId, userId });
+    setPendingRequests((reqs) => reqs.filter((r) => r.userId !== userId));
+    if (pendingRequests.length === 1) setApprovalRequired(false);
+  }
+  function handleReject(userId) {
+    socketRef.current.emit("reject-join", { room: roomId, userId });
+    setPendingRequests((reqs) => reqs.filter((r) => r.userId !== userId));
+    if (pendingRequests.length === 1) setApprovalRequired(false);
+  }
+
   // PRE-JOIN
   if (!ready) {
     return (
@@ -197,6 +258,53 @@ export default function VideoMeet() {
         <button className="meet-cute-btn" onClick={handleJoin}>
           Join Call
         </button>
+        {toast && <div style={{ marginTop: 20, color: "red" }}>{toast}</div>}
+      </div>
+    );
+  }
+
+  // Approval handling: guest view (waiting)
+  if (approvalRequired && !approved && pendingRequests.length === 0) {
+    return (
+      <div className="meet-cute-bg meet-center">
+        <div className="waiting-approval-popup">
+          <div style={{ fontSize: 20, marginBottom: 30 }}>
+            Waiting for Host Approval...
+          </div>
+          <div className="spinner" />
+        </div>
+        {toast && <div style={{ marginTop: 20, color: "red" }}>{toast}</div>}
+      </div>
+    );
+  }
+
+  // Host: show requests to approve/reject
+  if (approvalRequired && pendingRequests.length > 0) {
+    return (
+      <div className="meet-cute-bg meet-center">
+        <div className="approval-popup">
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 18 }}>
+            Approve guests to join your call:
+          </div>
+          {pendingRequests.map(req => (
+            <div key={req.userId} style={{
+              background: "#fcf8ff",
+              padding: "18px 22px",
+              borderRadius: "18px",
+              marginBottom: "18px",
+              boxShadow: "0 2px 14px 0px #eecdf3"
+            }}>
+              <span style={{ fontWeight: 600 }}>{req.username || req.userId}</span>
+              <button className="meet-cute-btn" style={{ marginLeft: 20 }} onClick={() => handleApprove(req.userId)}>
+                Approve
+              </button>
+              <button style={{ marginLeft: 6, background: "#ffebee", color: "#db2462", borderRadius: "13px", padding: "8px 16px", border: "none", fontWeight: 600, cursor: "pointer" }}
+                onClick={() => handleReject(req.userId)}>
+                Reject
+              </button>
+            </div>
+          ))}
+        </div>
         {toast && <div style={{ marginTop: 20, color: "red" }}>{toast}</div>}
       </div>
     );
