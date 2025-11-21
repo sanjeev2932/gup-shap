@@ -217,15 +217,19 @@ export default function VideoMeet() {
   // Tiles logic - only users with streams (video) are shown
   const remoteIds = Object.keys(streams);
   const tiles = [
-    ...remoteIds.map((id) => ({
-      id,
-      stream: streams[id],
-      username: participants.find((p) => p.id === id)?.username || id,
-    })),
-    { id: "local", stream: localStreamRef.current, username: "You" },
-  ].filter(t => t.stream); // Only tiles with video get rendered
+    ...remoteIds
+      .filter((id) => streams[id])
+      .map((id) => ({
+        id,
+        stream: streams[id],
+        username: participants.find((p) => p.id === id)?.username || id,
+      })),
+    localStreamRef.current
+      ? { id: "local", stream: localStreamRef.current, username: "You" }
+      : null,
+  ].filter(Boolean);
 
-  // Big tile for only one participant (video stream); equal size for multiple 
+  // Big tile for only one participant; equal size for multiple 
   const isSingle = tiles.length === 1;
 
   useEffect(() => {

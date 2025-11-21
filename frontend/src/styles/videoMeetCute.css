@@ -7,7 +7,6 @@
     radial-gradient(ellipse 75% 40% at 50% 10%, #f7fbff 70%, transparent 100%),
     radial-gradient(ellipse 60% 30% at 25% 80%, #ebf6ff 40%, transparent 98%);
   position: relative;
-  /* Optional: extra softness */
   box-shadow: 0 0 0 1px #eaf6fe;
 }
 
@@ -40,6 +39,9 @@
   background: #f3faff;
   box-shadow: 0 10px 70px 8px #cbeffdcc;
   transition: border-color 0.35s, box-shadow 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Multi-user equal tiles */
