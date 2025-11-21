@@ -31,17 +31,19 @@ export default function Authentication() {
       ? { username, password }
       : { name, username, password };
 
-    // ✔ FINAL CORRECT ROUTES
-    const url = isLogin
-      ? "/users/login"
-      : "/users/register";
+    const url = isLogin ? "/users/login" : "/users/register";
 
     const res = await post(url, payload);
 
-    if (!res || !res.success) {
+    console.log("API Response:", res); // for debugging
+
+    // FIXED: treat only explicit failures as failure
+    if (!res || res.success === false) {
       setError(res?.message || "Server error.");
       return;
     }
+
+    setError(""); // clear previous error
 
     if (res.token) localStorage.setItem("token", res.token);
     if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
