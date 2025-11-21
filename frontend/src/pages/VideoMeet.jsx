@@ -1,17 +1,18 @@
+// frontend/src/pages/VideoMeet.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import CallControls from "../components/CallControls";
 import VideoTile from "../components/VideoTile";
 import "../styles/videoComponent.css";
 import "../styles/videoMeetOverrides.css";
-
-const SIGNAL_SERVER = "https://gup-shapbackend.onrender.com";
+import server from "../environment"; // <--- use environment so build-time env var is used
 
 export default function VideoMeet() {
   const localRef = useRef();
   const peersRef = useRef({});
   const socketRef = useRef();
   const localStreamRef = useRef(null);
+  const screenStreamRef = useRef(null);
 
   const [roomId, setRoomId] = useState("");
   const [participants, setParticipants] = useState([]);
@@ -29,22 +30,43 @@ export default function VideoMeet() {
     const room = window.location.pathname.split("/")[2] || "lobby";
     setRoomId(room);
 
-    socketRef.current = io(SIGNAL_SERVER, {
-      transports: ["websocket"],
-      secure: true
+    // 1) Start local media immediately so browser asks permission
+    // This ensures the user sees a camera prompt even if socket fails
+    startLocalMedia().catch((e) => {
+      // don't block initialization if permission denied
+      console.warn("Local media start failed on mount:", e);
+    });
+
+    // 2) Connect socket: prefer websocket but allow polling fallback.
+    // Use `server` from environment so the correct deployed URL is used.
+    socketRef.current = io(server, {
+      path: "/socket.io",
+      transports: ["websocket", "polling"],
+      secure: true,
+      autoConnect: true,
     });
 
     socketRef.current.on("connect", () => {
+      console.log("socket connected", socketRef.current.id);
       const username = localStorage.user
         ? JSON.parse(localStorage.user).name
         : "Guest";
-
       socketRef.current.emit("join-request", { room, username });
+    });
+
+    socketRef.current.on("connect_error", (err) => {
+      console.error("socket connect_error", err);
+      showToast("Socket connection error");
     });
 
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
-      await startLocalMedia(payload.members || []);
+      // create offers to existing members (if not already)
+      for (const m of payload.members || []) {
+        if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
+          await createPeerAndOffer(m.id);
+        }
+      }
       showToast("You joined the room");
     });
 
@@ -54,7 +76,12 @@ export default function VideoMeet() {
 
     socketRef.current.on("approved", async (payload) => {
       setParticipants(payload.members || []);
-      await startLocalMedia(payload.members || []);
+      // create offers to existing members (if not already)
+      for (const m of payload.members || []) {
+        if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
+          await createPeerAndOffer(m.id);
+        }
+      }
     });
 
     socketRef.current.on("signal", async ({ from, type, data }) => {
@@ -67,8 +94,10 @@ export default function VideoMeet() {
         const pc = peersRef.current[from];
         if (pc) {
           try {
-            pc.addIceCandidate(data);
-          } catch {}
+            await pc.addIceCandidate(data);
+          } catch (err) {
+            console.warn("addIceCandidate failed", err);
+          }
         }
       }
     });
@@ -86,42 +115,47 @@ export default function VideoMeet() {
     });
 
     return () => cleanup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🔹 Start local camera/mic
+  // -----------------------------
+  // Media & Peer functions
+  // -----------------------------
   async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: true
+          audio: true,
         });
-
         localStreamRef.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
-      } catch {
+        setMicOn(Boolean(stream.getAudioTracks()[0]?.enabled));
+        setCamOn(Boolean(stream.getVideoTracks()[0]?.enabled));
+      } catch (err) {
+        console.warn("getUserMedia error:", err);
         showToast("Camera/Mic permission denied");
         return;
       }
     }
 
-    // create offers to all existing users
+    // If existingMembers provided (e.g. from server), create offers
     for (const m of existingMembers) {
-      if (m.id !== socketRef.current.id) {
+      if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
         await createPeerAndOffer(m.id);
       }
     }
   }
 
-  // 🔹 Create peer + send offer
   async function createPeerAndOffer(remoteId) {
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
 
     peersRef.current[remoteId] = pc;
 
-    localStreamRef.current.getTracks().forEach((track) => {
+    // add all tracks from local stream
+    localStreamRef.current?.getTracks().forEach((track) => {
       pc.addTrack(track, localStreamRef.current);
     });
 
@@ -129,10 +163,10 @@ export default function VideoMeet() {
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        socketRef.current.emit("signal", {
+        socketRef.current?.emit("signal", {
           to: remoteId,
           type: "candidate",
-          data: e.candidate
+          data: e.candidate,
         });
       }
     };
@@ -140,56 +174,54 @@ export default function VideoMeet() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    socketRef.current.emit("signal", {
+    socketRef.current?.emit("signal", {
       to: remoteId,
       type: "offer",
-      data: offer
+      data: offer,
     });
   }
 
-  // 🔹 Respond to an offer
   async function handleOffer(from, offer) {
     let pc = peersRef.current[from];
 
     if (!pc) {
       pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
-
       peersRef.current[from] = pc;
 
-      localStreamRef.current.getTracks().forEach((t) =>
-        pc.addTrack(t, localStreamRef.current)
-      );
+      // ensure local media is available
+      if (!localStreamRef.current) {
+        await startLocalMedia();
+      }
+
+      localStreamRef.current?.getTracks().forEach((t) => pc.addTrack(t, localStreamRef.current));
 
       pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
 
       pc.onicecandidate = (e) => {
         if (e.candidate)
-          socketRef.current.emit("signal", {
+          socketRef.current?.emit("signal", {
             to: from,
             type: "candidate",
-            data: e.candidate
+            data: e.candidate,
           });
       };
     }
 
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
-
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    socketRef.current.emit("signal", {
+    socketRef.current?.emit("signal", {
       to: from,
       type: "answer",
-      data: answer
+      data: answer,
     });
   }
 
-  // 🔹 Add remote stream
   function attachRemoteStream(peerId, stream) {
     setStreams((prev) => ({ ...prev, [peerId]: stream }));
-
     setParticipants((prev) => {
       if (!prev.find((p) => p.id === peerId)) {
         return [...prev, { id: peerId }];
@@ -206,7 +238,9 @@ export default function VideoMeet() {
     });
   }
 
-  // 🔹 Controls
+  // -----------------------------
+  // Controls
+  // -----------------------------
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
@@ -221,6 +255,61 @@ export default function VideoMeet() {
     setCamOn(track.enabled);
   };
 
+  // Screen share: replaces outgoing video track on all peer connections
+  const startScreenShare = async () => {
+    try {
+      if (screenStreamRef.current) return; // already sharing
+      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenStreamRef.current = screen;
+
+      // replace outgoing video track on each RTCPeerConnection
+      const screenTrack = screen.getVideoTracks()[0];
+      for (const [peerId, pc] of Object.entries(peersRef.current)) {
+        try {
+          const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+          if (sender) await sender.replaceTrack(screenTrack);
+        } catch (err) {
+          console.warn("replaceTrack error for peer", peerId, err);
+        }
+      }
+
+      // show screen locally
+      if (localRef.current) localRef.current.srcObject = screen;
+
+      // when user stops sharing, restore camera
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+    } catch (err) {
+      console.warn("screen share error", err);
+      showToast("Screen share failed");
+    }
+  };
+
+  const stopScreenShare = async () => {
+    if (!screenStreamRef.current) return;
+
+    // stop display stream tracks
+    screenStreamRef.current.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current = null;
+
+    // restore camera track to all peers
+    const camTrack = localStreamRef.current?.getVideoTracks()[0];
+    for (const [peerId, pc] of Object.entries(peersRef.current)) {
+      try {
+        const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+        if (sender && camTrack) await sender.replaceTrack(camTrack);
+      } catch (err) {
+        console.warn("replaceTrack restore error", peerId, err);
+      }
+    }
+
+    // restore local video element to camera stream
+    if (localRef.current && localStreamRef.current) {
+      localRef.current.srcObject = localStreamRef.current;
+    }
+  };
+
   const endCall = () => {
     cleanup();
     window.location.href = "/";
@@ -228,11 +317,17 @@ export default function VideoMeet() {
 
   function cleanup() {
     try {
-      socketRef.current.disconnect();
+      socketRef.current?.disconnect();
     } catch {}
+
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+    }
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
     }
 
     for (const pc of Object.values(peersRef.current)) {
@@ -242,9 +337,13 @@ export default function VideoMeet() {
     }
 
     peersRef.current = {};
+    setStreams({});
+    setParticipants([]);
   }
 
-  // 🔹 UI
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
     <div className="video-container">
       <div className="topbar">
@@ -274,6 +373,9 @@ export default function VideoMeet() {
         onToggleMic={toggleMic}
         onToggleCam={toggleCam}
         onEndCall={endCall}
+        // if your CallControls accepts handlers for screen share:
+        onStartScreenShare={startScreenShare}
+        onStopScreenShare={stopScreenShare}
       />
 
       {toast && <div className="toast">{toast}</div>}

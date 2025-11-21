@@ -1,13 +1,22 @@
+// backend/src/routes/history.routes.js
 import express from "express";
 import { addHistory, getHistory } from "../controllers/history.controller.js";
 import auth from "../middleware/auth.js";
 
 const router = express.Router();
 
-// POST /api/v1/history/add
+/**
+ * @route POST /api/v1/history/add
+ * @desc Save a meeting entry for the logged-in user
+ * @access Private
+ */
 router.post("/add", auth, addHistory);
 
-// GET /api/v1/history
+/**
+ * @route GET /api/v1/history
+ * @desc Fetch meeting history for logged-in user
+ * @access Private
+ */
 router.get("/", auth, getHistory);
 
 export default router;
