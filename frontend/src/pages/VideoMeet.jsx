@@ -88,6 +88,15 @@ export default function VideoMeet() {
     }
   }
 
+  function attachRemoteStream(peerId, stream) {
+    setStreams((prev) => ({ ...prev, [peerId]: stream }));
+    setParticipants((prev) => {
+      if (!prev.find((p) => p.id === peerId))
+        return [...prev, { id: peerId }];
+      return prev;
+    });
+  }
+
   function cleanup() {
     try { socketRef.current?.disconnect(); } catch {}
     try { screenStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
@@ -102,13 +111,13 @@ export default function VideoMeet() {
     setParticipants([]);
   }
 
-  function attachRemoteStream(peerId, stream) {
-    setStreams((prev) => ({ ...prev, [peerId]: stream }));
-    setParticipants((prev) => {
-      if (!prev.find((p) => p.id === peerId))
-        return [...prev, { id: peerId }];
-      return prev;
-    });
+  async function handleJoin() {
+    try {
+      await startLocalMedia();
+      setReady(true);
+    } catch (e) {
+      console.warn("handleJoin error", e);
+    }
   }
 
   useEffect(() => {
