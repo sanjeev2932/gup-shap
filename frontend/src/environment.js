@@ -1,2 +1,2 @@
-const server = process.env.REACT_APP_SERVER_URL;
+const server = "https://gup-shapbackend.onrender.com";
 export default server;

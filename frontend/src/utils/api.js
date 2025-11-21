@@ -1,7 +1,7 @@
 // frontend/src/utils/api.js
 
 // Load base URL from .env
-const API_BASE = process.env.REACT_APP_SERVER_URL;
+const API_BASE = `${process.env.REACT_APP_SERVER_URL}/api/v1`;
 
 
 // ===== FIXED safeParse =====
