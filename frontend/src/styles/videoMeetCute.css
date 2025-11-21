@@ -1,9 +1,19 @@
-/* Sky blue bg gradient */
+/* Cute, dreamy sky blue gradient + soft cloud overlay */
 .meet-cute-bg, .meet-page-cute {
   min-height: 100vh;
   width: 100vw;
-  background: linear-gradient(128deg, #d6e9ff 0%, #ebf6fc 100%);
+  background:
+    linear-gradient(132deg, #d6ecff 0%, #e9f7fc 100%),
+    radial-gradient(ellipse 75% 40% at 50% 10%, #f7fbff 70%, transparent 100%),
+    radial-gradient(ellipse 60% 30% at 25% 80%, #ebf6ff 40%, transparent 98%);
   position: relative;
+  /* Optional: extra softness */
+  box-shadow: 0 0 0 1px #eaf6fe;
+}
+
+/* Remove white or solid backgrounds from child containers */
+.videoStageCute, .remoteGrid, .singleStage {
+  background: transparent !important;
 }
 
 /* Topbar styling */
@@ -26,9 +36,9 @@
   height: 340px !important;
   margin: 0 auto;
   border-radius: 40px;
-  border: 10px solid #ffe8f2 !important;
-  background: #eaf9ff;
-  box-shadow: 0 10px 70px 8px #bae6fdcc;
+  border: 11px solid #fbecec !important;
+  background: #f3faff;
+  box-shadow: 0 10px 70px 8px #cbeffdcc;
   transition: border-color 0.35s, box-shadow 0.3s;
 }
 
@@ -37,26 +47,26 @@
   width: 330px;
   height: 200px;
   border-radius: 26px;
-  border: 7px solid #fbe8ed !important;
-  background: #e8f5fd;
-  box-shadow: 0 3px 18px rgb(160 210 255 / 20%);
+  border: 7px solid #fbf4fb !important;
+  background: #f2fbff;
+  box-shadow: 0 3px 18px rgb(160 210 255 / 19%);
 }
 
 /* Speaking: glow and 2x grow! */
 .participantTile.active {
-  box-shadow: 0 12px 80px 2px #abdefb, 0 4px 36px #ffd6f655;
+  box-shadow: 0 16px 90px 2px #c1eaffdd, 0 4px 36px #ffd6f655;
   border-color: #fff8dd !important;
   transform: scale(2.0);
   z-index: 6;
   transition: transform 0.4s, box-shadow 0.3s, border-color 0.3s;
-  background: #e4fafe !important;
+  background: #ebfbfe !important;
 }
 
 /* Presenting: shrink all tiles to let screen be big */
 .presentingStage .participantTile {
   width: 160px !important;
   height: 90px !important;
-  opacity: 0.80 !important;
+  opacity: 0.82 !important;
   border-radius: 13px !important;
   border-width: 6px !important;
 }
@@ -76,7 +86,7 @@
   position: absolute;
   bottom: 14px;
   left: 20px;
-  background: #8acaffcc;
+  background: #b5e2ffcc;
   color: #563f6a;
   padding: 9px 24px;
   border-radius: 22px;
@@ -88,9 +98,7 @@
   border: 2px solid #e5cadb;
 }
 
-/* Side badges/pin/hand remain as before */
-
-/* BG responsive tweaks */
+/* Responsive for cute vibes */
 @media(max-width:900px) {
   .singleStage .participantTile, .videoGridCute .participantTile {
     width: 95vw !important;

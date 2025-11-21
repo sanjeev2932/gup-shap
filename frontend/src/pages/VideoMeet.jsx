@@ -24,7 +24,7 @@ export default function VideoMeet() {
   const [ready, setReady] = useState(false);
   const [screenActive, setScreenActive] = useState(false);
 
-  // New: Approval
+  // Approval logic
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [approved, setApproved] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]); // {userId, username}
@@ -35,22 +35,20 @@ export default function VideoMeet() {
   }
 
   async function startLocalMedia() {
-    if (!localStreamRef.current) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localStreamRef.current = stream;
-        if (localRef.current) localRef.current.srcObject = stream;
-        setMicOn(Boolean(stream.getAudioTracks()[0]?.enabled));
-        setCamOn(Boolean(stream.getVideoTracks()[0]?.enabled));
-      } catch (err) {
-        console.warn("getUserMedia error:", err);
-        if (err.name === "NotAllowedError") {
-          showToast("Camera/Microphone permission denied");
-        } else {
-          showToast("Unable to access camera/microphone");
-        }
-        throw err;
+    // Always fetch media on join for reliability
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
+      if (localRef.current) localRef.current.srcObject = stream;
+      setMicOn(Boolean(stream.getAudioTracks()[0]?.enabled));
+      setCamOn(Boolean(stream.getVideoTracks()[0]?.enabled));
+    } catch (err) {
+      if (err.name === "NotAllowedError") {
+        showToast("Camera/Microphone permission denied");
+      } else {
+        showToast("Unable to access camera/microphone");
       }
+      throw err;
     }
   }
 
@@ -162,7 +160,6 @@ export default function VideoMeet() {
       setApproved(true);
       setParticipants(payload.members || []);
       showToast("You have been approved! Joining room...");
-      // Connect media/peers
       for (const m of payload.members || []) {
         if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
           createPeerAndOffer(m.id);
@@ -178,8 +175,6 @@ export default function VideoMeet() {
       setTimeout(() => window.location.href = "/", 2200);
     });
 
-    // Host: approve or reject via UI (handled below)
-    // Host: also mark themselves as approved instantly
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
       if (payload.isHost) {
@@ -219,25 +214,25 @@ export default function VideoMeet() {
     return () => cleanup();
   }, [ready]);
 
-  // Floating local video tile logic
-  const tiles = Object.keys(streams).length === 0
-    ? [{ id: "local", stream: localStreamRef.current, username: "You" }]
-    : [
-        ...Object.keys(streams).map((id) => ({
-          id,
-          stream: streams[id],
-          username:
-            participants.find((p) => p.id === id)?.username || id,
-        })),
-        { id: "local", stream: localStreamRef.current, username: "You" },
-      ];
+  // Tiles logic - only users with streams (video) are shown
+  const remoteIds = Object.keys(streams);
+  const tiles = [
+    ...remoteIds.map((id) => ({
+      id,
+      stream: streams[id],
+      username: participants.find((p) => p.id === id)?.username || id,
+    })),
+    { id: "local", stream: localStreamRef.current, username: "You" },
+  ].filter(t => t.stream); // Only tiles with video get rendered
+
+  // Big tile for only one participant (video stream); equal size for multiple 
+  const isSingle = tiles.length === 1;
 
   useEffect(() => {
     setScreenActive(Boolean(screenStreamRef.current));
   }, [screenStreamRef.current]);
 
-  const speakingId = getSpeakingId(participants); // replace with real detection
-  const single = tiles.length === 1;
+  const speakingId = getSpeakingId(participants);
 
   // Host UI: approve/reject popups
   function handleApprove(userId) {
@@ -263,7 +258,7 @@ export default function VideoMeet() {
     );
   }
 
-  // Approval handling: guest view (waiting)
+  // Approval handling: guest view
   if (approvalRequired && !approved && pendingRequests.length === 0) {
     return (
       <div className="meet-cute-bg meet-center">
@@ -320,7 +315,7 @@ export default function VideoMeet() {
           {participants.length} participants
         </div>
       </div>
-      <div className={`videoStageCute ${single ? "singleStage" : ""}`}>
+      <div className={`videoStageCute ${isSingle ? "singleStage" : ""}`}>
         <div className={`videoGridCute${screenActive ? " presentingStage" : ""}`}>
           {tiles.map((tile) => (
             <VideoTile
