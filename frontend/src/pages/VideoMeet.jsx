@@ -5,7 +5,7 @@ import CallControls from "../components/CallControls";
 import VideoTile from "../components/VideoTile";
 import "../styles/videoComponent.css";
 import "../styles/videoMeetOverrides.css";
-import server from "../environment"; // <--- use environment so build-time env var is used
+import server from "../environment";
 
 export default function VideoMeet() {
   const localRef = useRef();
@@ -30,15 +30,12 @@ export default function VideoMeet() {
     const room = window.location.pathname.split("/")[2] || "lobby";
     setRoomId(room);
 
-    // 1) Start local media immediately so browser asks permission
-    // This ensures the user sees a camera prompt even if socket fails
+    // Start local media so browser prompts for permission immediately
     startLocalMedia().catch((e) => {
-      // don't block initialization if permission denied
-      console.warn("Local media start failed on mount:", e);
+      console.warn("startLocalMedia on mount failed:", e);
     });
 
-    // 2) Connect socket: prefer websocket but allow polling fallback.
-    // Use `server` from environment so the correct deployed URL is used.
+    // connect socket using environment server
     socketRef.current = io(server, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
@@ -47,10 +44,7 @@ export default function VideoMeet() {
     });
 
     socketRef.current.on("connect", () => {
-      console.log("socket connected", socketRef.current.id);
-      const username = localStorage.user
-        ? JSON.parse(localStorage.user).name
-        : "Guest";
+      const username = localStorage.user ? JSON.parse(localStorage.user).name : "Guest";
       socketRef.current.emit("join-request", { room, username });
     });
 
@@ -61,7 +55,7 @@ export default function VideoMeet() {
 
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
-      // create offers to existing members (if not already)
+      // Create offers for existing members
       for (const m of payload.members || []) {
         if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
           await createPeerAndOffer(m.id);
@@ -76,7 +70,6 @@ export default function VideoMeet() {
 
     socketRef.current.on("approved", async (payload) => {
       setParticipants(payload.members || []);
-      // create offers to existing members (if not already)
       for (const m of payload.members || []) {
         if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
           await createPeerAndOffer(m.id);
@@ -85,10 +78,16 @@ export default function VideoMeet() {
     });
 
     socketRef.current.on("signal", async ({ from, type, data }) => {
-      if (type === "offer") handleOffer(from, data);
+      if (type === "offer") await handleOffer(from, data);
       if (type === "answer") {
         const pc = peersRef.current[from];
-        if (pc) pc.setRemoteDescription(new RTCSessionDescription(data));
+        if (pc) {
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(data));
+          } catch (err) {
+            console.warn("setRemoteDescription answer error", err);
+          }
+        }
       }
       if (type === "candidate") {
         const pc = peersRef.current[from];
@@ -118,129 +117,120 @@ export default function VideoMeet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // -----------------------------
-  // Media & Peer functions
-  // -----------------------------
+  // Start camera/mic and attach to local video element
   async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStreamRef.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
         setMicOn(Boolean(stream.getAudioTracks()[0]?.enabled));
         setCamOn(Boolean(stream.getVideoTracks()[0]?.enabled));
       } catch (err) {
         console.warn("getUserMedia error:", err);
-        showToast("Camera/Mic permission denied");
+        // Different browsers yield different errors; give a helpful message
+        if (err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")) {
+          showToast("Camera/Microphone permission denied");
+        } else {
+          showToast("Unable to access camera/microphone");
+        }
         return;
       }
     }
 
-    // If existingMembers provided (e.g. from server), create offers
+    // If server gave existing members, create offers to them
     for (const m of existingMembers) {
-      if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
+      if (m.id !== socketRef.current?.id && !peersRef.current[m.id]) {
         await createPeerAndOffer(m.id);
       }
     }
   }
 
+  // create peer connection and send offer
   async function createPeerAndOffer(remoteId) {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
     peersRef.current[remoteId] = pc;
 
-    // add all tracks from local stream
+    // add local tracks (if available)
     localStreamRef.current?.getTracks().forEach((track) => {
-      pc.addTrack(track, localStreamRef.current);
+      try {
+        pc.addTrack(track, localStreamRef.current);
+      } catch (err) {
+        console.warn("pc.addTrack failed", err);
+      }
     });
 
     pc.ontrack = (e) => attachRemoteStream(remoteId, e.streams[0]);
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        socketRef.current?.emit("signal", {
-          to: remoteId,
-          type: "candidate",
-          data: e.candidate,
-        });
+        socketRef.current?.emit("signal", { to: remoteId, type: "candidate", data: e.candidate });
       }
     };
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    socketRef.current?.emit("signal", {
-      to: remoteId,
-      type: "offer",
-      data: offer,
-    });
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socketRef.current?.emit("signal", { to: remoteId, type: "offer", data: offer });
+    } catch (err) {
+      console.warn("createPeerAndOffer error", err);
+    }
   }
 
+  // handle incoming offer -> create answer
   async function handleOffer(from, offer) {
     let pc = peersRef.current[from];
-
     if (!pc) {
-      pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      });
+      pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
       peersRef.current[from] = pc;
 
-      // ensure local media is available
+      // ensure we have local media to add
       if (!localStreamRef.current) {
         await startLocalMedia();
       }
-
-      localStreamRef.current?.getTracks().forEach((t) => pc.addTrack(t, localStreamRef.current));
+      localStreamRef.current?.getTracks().forEach((t) => {
+        try {
+          pc.addTrack(t, localStreamRef.current);
+        } catch (err) {
+          console.warn("pc.addTrack inside handleOffer failed", err);
+        }
+      });
 
       pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
 
       pc.onicecandidate = (e) => {
         if (e.candidate)
-          socketRef.current?.emit("signal", {
-            to: from,
-            type: "candidate",
-            data: e.candidate,
-          });
+          socketRef.current?.emit("signal", { to: from, type: "candidate", data: e.candidate });
       };
     }
 
-    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-
-    socketRef.current?.emit("signal", {
-      to: from,
-      type: "answer",
-      data: answer,
-    });
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socketRef.current?.emit("signal", { to: from, type: "answer", data: answer });
+    } catch (err) {
+      console.warn("handleOffer error", err);
+    }
   }
 
   function attachRemoteStream(peerId, stream) {
     setStreams((prev) => ({ ...prev, [peerId]: stream }));
     setParticipants((prev) => {
-      if (!prev.find((p) => p.id === peerId)) {
-        return [...prev, { id: peerId }];
-      }
+      if (!prev.find((p) => p.id === peerId)) return [...prev, { id: peerId }];
       return prev;
     });
   }
 
   function removeRemoteStream(peerId) {
     setStreams((prev) => {
-      const c = { ...prev };
-      delete c[peerId];
-      return c;
+      const copy = { ...prev };
+      delete copy[peerId];
+      return copy;
     });
   }
 
-  // -----------------------------
-  // Controls
-  // -----------------------------
+  // Toggle mic on/off
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
@@ -248,6 +238,7 @@ export default function VideoMeet() {
     setMicOn(track.enabled);
   };
 
+  // Toggle camera on/off
   const toggleCam = () => {
     const track = localStreamRef.current?.getVideoTracks()[0];
     if (!track) return;
@@ -255,59 +246,56 @@ export default function VideoMeet() {
     setCamOn(track.enabled);
   };
 
-  // Screen share: replaces outgoing video track on all peer connections
+  // start screen share and replace outgoing video senders
   const startScreenShare = async () => {
     try {
-      if (screenStreamRef.current) return; // already sharing
+      if (screenStreamRef.current) return;
       const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
       screenStreamRef.current = screen;
-
-      // replace outgoing video track on each RTCPeerConnection
       const screenTrack = screen.getVideoTracks()[0];
-      for (const [peerId, pc] of Object.entries(peersRef.current)) {
+
+      for (const pc of Object.values(peersRef.current)) {
         try {
           const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
           if (sender) await sender.replaceTrack(screenTrack);
         } catch (err) {
-          console.warn("replaceTrack error for peer", peerId, err);
+          console.warn("replaceTrack error during startScreenShare", err);
         }
       }
 
-      // show screen locally
       if (localRef.current) localRef.current.srcObject = screen;
 
-      // when user stops sharing, restore camera
       screenTrack.onended = () => {
         stopScreenShare();
       };
     } catch (err) {
-      console.warn("screen share error", err);
-      showToast("Screen share failed");
+      console.warn("startScreenShare error", err);
+      showToast("Screen share failed or was cancelled");
     }
   };
 
+  // stop screen share and restore camera track
   const stopScreenShare = async () => {
     if (!screenStreamRef.current) return;
 
-    // stop display stream tracks
-    screenStreamRef.current.getTracks().forEach((t) => t.stop());
+    try {
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+    } catch (err) {
+      console.warn("stopScreenShare stop tracks error", err);
+    }
     screenStreamRef.current = null;
 
-    // restore camera track to all peers
     const camTrack = localStreamRef.current?.getVideoTracks()[0];
-    for (const [peerId, pc] of Object.entries(peersRef.current)) {
+    for (const pc of Object.values(peersRef.current)) {
       try {
         const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
         if (sender && camTrack) await sender.replaceTrack(camTrack);
       } catch (err) {
-        console.warn("replaceTrack restore error", peerId, err);
+        console.warn("replaceTrack restore error", err);
       }
     }
 
-    // restore local video element to camera stream
-    if (localRef.current && localStreamRef.current) {
-      localRef.current.srcObject = localStreamRef.current;
-    }
+    if (localRef.current && localStreamRef.current) localRef.current.srcObject = localStreamRef.current;
   };
 
   const endCall = () => {
@@ -320,15 +308,13 @@ export default function VideoMeet() {
       socketRef.current?.disconnect();
     } catch {}
 
-    if (screenStreamRef.current) {
-      screenStreamRef.current.getTracks().forEach((t) => t.stop());
-      screenStreamRef.current = null;
-    }
+    try {
+      if (screenStreamRef.current) screenStreamRef.current.getTracks().forEach((t) => t.stop());
+    } catch {}
 
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
-    }
+    try {
+      if (localStreamRef.current) localStreamRef.current.getTracks().forEach((t) => t.stop());
+    } catch {}
 
     for (const pc of Object.values(peersRef.current)) {
       try {
@@ -337,19 +323,16 @@ export default function VideoMeet() {
     }
 
     peersRef.current = {};
+    localStreamRef.current = null;
+    screenStreamRef.current = null;
     setStreams({});
     setParticipants([]);
   }
 
-  // -----------------------------
-  // UI
-  // -----------------------------
   return (
     <div className="video-container">
       <div className="topbar">
-        <div className="roomLabel">
-          Gup-Shap — Room: <span className="roomId">{roomId}</span>
-        </div>
+        <div className="roomLabel">Gup-Shap — Room: <span className="roomId">{roomId}</span></div>
         <div className="statusBadges">
           <div className="countBadge">{participants.length} participants</div>
         </div>
@@ -357,9 +340,7 @@ export default function VideoMeet() {
 
       <div className="videoStage">
         <div id="remote-videos" className="remoteGrid">
-          {Object.keys(streams).map((id) => (
-            <VideoTile key={id} id={id} stream={streams[id]} />
-          ))}
+          {Object.keys(streams).map((id) => <VideoTile key={id} id={id} stream={streams[id]} />)}
         </div>
 
         <div className="localFloating">
@@ -373,7 +354,6 @@ export default function VideoMeet() {
         onToggleMic={toggleMic}
         onToggleCam={toggleCam}
         onEndCall={endCall}
-        // if your CallControls accepts handlers for screen share:
         onStartScreenShare={startScreenShare}
         onStopScreenShare={stopScreenShare}
       />
