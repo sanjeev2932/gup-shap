@@ -35,7 +35,10 @@ export default function VideoMeet() {
     });
 
     socketRef.current.on("connect", () => {
-      const username = localStorage.user ? JSON.parse(localStorage.user).name : "Guest";
+      const username = localStorage.user
+        ? JSON.parse(localStorage.user).name
+        : "Guest";
+
       socketRef.current.emit("join-request", { room, username });
     });
 
@@ -45,37 +48,47 @@ export default function VideoMeet() {
       showToast("You joined the room");
     });
 
-    socketRef.current.on("approved", async (payload) => {
-      setParticipants(payload.members || []);
-      await startLocalMedia(payload.members || []);
-      showToast("Approved — you are in");
-    });
-
     socketRef.current.on("members", (list) => {
       setParticipants(list || []);
     });
 
+    socketRef.current.on("approved", async (payload) => {
+      setParticipants(payload.members || []);
+      await startLocalMedia(payload.members || []);
+    });
+
     socketRef.current.on("signal", async ({ from, type, data }) => {
-      if (type === "offer") await handleOffer(from, data);
-      else if (type === "answer") {
+      if (type === "offer") handleOffer(from, data);
+      if (type === "answer") {
         const pc = peersRef.current[from];
-        if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data));
-      } else if (type === "candidate") {
+        if (pc) pc.setRemoteDescription(new RTCSessionDescription(data));
+      }
+      if (type === "candidate") {
         const pc = peersRef.current[from];
-        if (pc) try { await pc.addIceCandidate(data); } catch {}
+        if (pc) {
+          try {
+            pc.addIceCandidate(data);
+          } catch {}
+        }
       }
     });
 
     socketRef.current.on("user-left", ({ id }) => {
       const pc = peersRef.current[id];
-      if (pc) { try { pc.close(); } catch {} delete peersRef.current[id]; }
+      if (pc) {
+        try {
+          pc.close();
+        } catch {}
+      }
+      delete peersRef.current[id];
       removeRemoteStream(id);
-      setParticipants(prev => prev.filter(p => p.id !== id));
+      setParticipants((cur) => cur.filter((p) => p.id !== id));
     });
 
     return () => cleanup();
   }, []);
 
+  // 🔹 Start local camera/mic
   async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       try {
@@ -83,6 +96,7 @@ export default function VideoMeet() {
           video: true,
           audio: true
         });
+
         localStreamRef.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
       } catch {
@@ -91,33 +105,49 @@ export default function VideoMeet() {
       }
     }
 
+    // create offers to all existing users
     for (const m of existingMembers) {
-      if (m.id !== socketRef.current.id) await createPeerAndOffer(m.id);
+      if (m.id !== socketRef.current.id) {
+        await createPeerAndOffer(m.id);
+      }
     }
   }
 
+  // 🔹 Create peer + send offer
   async function createPeerAndOffer(remoteId) {
-    if (peersRef.current[remoteId]) return;
-
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     });
+
     peersRef.current[remoteId] = pc;
 
-    localStreamRef.current?.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
+    localStreamRef.current.getTracks().forEach((track) => {
+      pc.addTrack(track, localStreamRef.current);
+    });
 
     pc.ontrack = (e) => attachRemoteStream(remoteId, e.streams[0]);
+
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        socketRef.current.emit("signal", { to: remoteId, type: "candidate", data: e.candidate });
+        socketRef.current.emit("signal", {
+          to: remoteId,
+          type: "candidate",
+          data: e.candidate
+        });
       }
     };
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    socketRef.current.emit("signal", { to: remoteId, type: "offer", data: offer });
+
+    socketRef.current.emit("signal", {
+      to: remoteId,
+      type: "offer",
+      data: offer
+    });
   }
 
+  // 🔹 Respond to an offer
   async function handleOffer(from, offer) {
     let pc = peersRef.current[from];
 
@@ -125,37 +155,58 @@ export default function VideoMeet() {
       pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
       });
+
       peersRef.current[from] = pc;
-      localStreamRef.current?.getTracks().forEach(t => pc.addTrack(t, localStreamRef.current));
+
+      localStreamRef.current.getTracks().forEach((t) =>
+        pc.addTrack(t, localStreamRef.current)
+      );
 
       pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
+
       pc.onicecandidate = (e) => {
-        if (e.candidate) socketRef.current.emit("signal", { to: from, type: "candidate", data: e.candidate });
+        if (e.candidate)
+          socketRef.current.emit("signal", {
+            to: from,
+            type: "candidate",
+            data: e.candidate
+          });
       };
     }
 
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
+
+    socketRef.current.emit("signal", {
+      to: from,
+      type: "answer",
+      data: answer
+    });
   }
 
+  // 🔹 Add remote stream
   function attachRemoteStream(peerId, stream) {
-    setStreams(prev => ({ ...prev, [peerId]: stream }));
-    setParticipants(prev => {
-      if (!prev.find(p => p.id === peerId)) return [...prev, { id: peerId }];
+    setStreams((prev) => ({ ...prev, [peerId]: stream }));
+
+    setParticipants((prev) => {
+      if (!prev.find((p) => p.id === peerId)) {
+        return [...prev, { id: peerId }];
+      }
       return prev;
     });
   }
 
   function removeRemoteStream(peerId) {
-    setStreams(prev => {
+    setStreams((prev) => {
       const c = { ...prev };
       delete c[peerId];
       return c;
     });
   }
 
+  // 🔹 Controls
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
@@ -176,12 +227,24 @@ export default function VideoMeet() {
   };
 
   function cleanup() {
-    try { socketRef.current?.disconnect(); } catch {}
-    localStreamRef.current?.getTracks().forEach(t => t.stop());
-    Object.values(peersRef.current).forEach(pc => pc.close());
+    try {
+      socketRef.current.disconnect();
+    } catch {}
+
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => t.stop());
+    }
+
+    for (const pc of Object.values(peersRef.current)) {
+      try {
+        pc.close();
+      } catch {}
+    }
+
     peersRef.current = {};
   }
 
+  // 🔹 UI
   return (
     <div className="video-container">
       <div className="topbar">
@@ -195,7 +258,7 @@ export default function VideoMeet() {
 
       <div className="videoStage">
         <div id="remote-videos" className="remoteGrid">
-          {Object.keys(streams).map(id => (
+          {Object.keys(streams).map((id) => (
             <VideoTile key={id} id={id} stream={streams[id]} />
           ))}
         </div>
