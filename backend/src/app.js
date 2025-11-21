@@ -20,7 +20,7 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.log("MongoDB error:", err));
 
-// API ROUTES — FIXED PREFIX
+// FIXED API ROUTES (MATCH FRONTEND)
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/history", historyRoutes);
 
