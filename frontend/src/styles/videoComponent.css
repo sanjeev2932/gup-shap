@@ -1,0 +1,93 @@
+/* ---------------- PARTICIPANT TILE (Cute Style) ---------------- */
+.participantTile {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #ffffffcc;
+  border: 4px solid #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.35s ease, transform 0.35s ease;
+}
+
+/* video */
+.remoteVideoEl {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  border-radius: 22px;
+}
+
+/* username label */
+.tileLabel {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* raised hand */
+.raisedBadge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: gold;
+  padding: 6px 10px;
+  border-radius: 50%;
+  font-size: 18px;
+  display: block !important;
+}
+
+/* ---------------- ACTIVE SPEAKER BIG TILE ---------------- */
+.participantTile.active {
+  z-index: 3;
+  transform: scale(1.45);
+  box-shadow: 0 20px 55px rgba(0, 150, 255, 0.25);
+  border: 4px solid #a6ddff;
+}
+
+/* Make all non-active tiles equal & small */
+.remoteGrid:not(:has(.screenTile)) .participantTile:not(.active) {
+  transform: scale(0.85);
+  opacity: 0.92;
+}
+
+/* Smooth layout animation */
+.remoteGrid {
+  transition: all 0.4s ease;
+}
+/* ---------------- PIN BADGE ---------------- */
+.pinBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #ffffffdd;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 18px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+/* When pinned → make tile larger and centered */
+.participantTile.pinned {
+  transform: scale(1.55) !important;
+  z-index: 4 !important;
+  border: 4px solid #99d6ff !important;
+  box-shadow: 0 24px 60px rgba(0, 150, 255, 0.25) !important;
+}
+
+/* All others shrink equally */
+.remoteGrid:has(.pinned) .participantTile:not(.pinned) {
+  transform: scale(0.75) !important;
+  opacity: 0.85;
+}

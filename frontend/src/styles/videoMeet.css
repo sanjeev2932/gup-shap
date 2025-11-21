@@ -1,0 +1,50 @@
+.meet-page {
+  text-align: center;
+  background: #08101f;
+  min-height: 100vh;
+  padding: 20px;
+  color: white;
+}
+
+.room-title {
+  margin-bottom: 20px;
+  font-size: 22px;
+}
+
+.video-grid {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.video-item {
+  background: #000;
+  border-radius: 10px;
+  padding: 6px;
+}
+
+.video {
+  width: 380px;
+  height: 240px;
+  border-radius: 10px;
+  background: black;
+  object-fit: cover;
+}
+
+.controls {
+  margin-top: 20px;
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.controls button {
+  background: #1a73e8;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+}

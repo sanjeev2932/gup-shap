@@ -1,0 +1,103 @@
+/* ---------------- PIN FEATURE ---------------- */
+
+.pinned {
+  grid-column: 1 / -1 !important;
+  grid-row: span 2;
+  height: 75vh !important;
+  z-index: 5;
+  transform: scale(1.03);
+  border: 3px solid #7cc2ff;
+  box-shadow: 0 12px 40px rgba(0, 150, 255, 0.3);
+}
+
+.pinBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 22px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 4px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* When a tile is pinned → others shrink */
+.remoteGrid:has(.pinned) .participantTile:not(.pinned) {
+  opacity: 0.65;
+  filter: blur(1px);
+  scale: 0.92;
+  transition: 0.3s;
+}
+/* ---------------- PIN FEATURE ---------------- */
+
+.pinned {
+  grid-column: 1 / -1 !important;
+  grid-row: span 2;
+  height: 75vh !important;
+  z-index: 5;
+  transform: scale(1.03);
+  border: 3px solid #7cc2ff;
+  box-shadow: 0 12px 40px rgba(0, 150, 255, 0.3);
+}
+
+.pinBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 22px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 4px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.remoteGrid:has(.pinned) .participantTile:not(.pinned) {
+  opacity: 0.65;
+  filter: blur(1px);
+  scale: 0.92;
+  transition: 0.3s;
+}
+/* ---------------------- ACTIVE & PINNED TILE BOOST ---------------------- */
+
+/* Normal tile */
+.participantTile {
+  transition: all 0.25s ease;
+  border: 3px solid rgba(255,255,255,0.7);
+  border-radius: 14px;
+}
+
+/* Active speaker OR pinned tile → becomes larger */
+.participantTile.active,
+.participantTile.pinned {
+  transform: scale(1.35);
+  z-index: 5;
+  border-color: #5ebeff;
+  box-shadow: 0 12px 40px rgba(50,150,255,0.25);
+}
+
+/* All other tiles slightly shrink */
+.remoteGrid:has(.active) .participantTile:not(.active):not(.pinned),
+.remoteGrid:has(.pinned) .participantTile:not(.pinned) {
+  transform: scale(0.85);
+  opacity: 0.92;
+}
+
+/* Ensure smooth transitions */
+.remoteGrid .participantTile {
+  transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Pin badge style */
+.pinBadge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 20px;
+  background: rgba(0,0,0,0.45);
+  padding: 4px 10px;
+  border-radius: 8px;
+  color: #fff;
+  z-index: 10;
+}

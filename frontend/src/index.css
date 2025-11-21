@@ -1,0 +1,62 @@
+/* index.css — Tailwind + small custom rules */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* small customizations */
+:root{
+  --bg-dark: #0f0f16;
+  --panel-dark: #111216;
+  --accent: #1976d2;
+}
+
+/* Light page body for Landing/Auth/Home */
+body.light-mode {
+  @apply bg-white text-gray-900;
+}
+
+/* Dark meeting background */
+body.dark-meeting {
+  background: radial-gradient(ellipse at 10% 10%, rgba(70,60,90,0.12), transparent 15%),
+              radial-gradient(ellipse at 100% 100%, rgba(20,20,40,0.06), transparent 18%),
+              var(--bg-dark);
+  color: #e6e6ea;
+}
+
+/* small input tweaks */
+.input-default {
+  @apply w-full rounded-md px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400;
+}
+.input-dark {
+  @apply w-full rounded-md px-3 py-2 bg-transparent border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600;
+}
+
+/* chat panel scroll */
+.chat-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* small button */
+.btn {
+  @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center rounded-md px-3 py-2 bg-transparent text-gray-300 border border-transparent hover:bg-gray-800;
+}
+
+/* video card */
+.video-card {
+  @apply rounded-lg overflow-hidden border border-gray-800 bg-black/80;
+}
+
+/* small shadow for centered cards */
+.center-card {
+  box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+}
+
+/* responsive helpers */
+@media (max-width: 768px) {
+  .hide-sm { display: none; }
+}

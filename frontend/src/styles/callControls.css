@@ -1,0 +1,210 @@
+/* =============================================== */
+/*   GUP-SHAP – FINAL GEN-Z CALL CONTROLS UI       */
+/* =============================================== */
+
+/* Main wrapper at bottom center */
+.gs-controlsWrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+}
+
+/* Bubble container */
+.gs-controlsBubble {
+  display: flex;
+  gap: 14px;
+  background: linear-gradient(
+    to right,
+    rgba(255,255,255,0.94),
+    rgba(255,255,255,0.88)
+  );
+  padding: 12px 18px;
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(10,30,50,0.10);
+  align-items: center;
+  backdrop-filter: blur(10px);
+}
+
+/* Generic Button */
+.gs-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: 0.15s ease;
+  background: white;
+  color: #17202a;
+  box-shadow: 0 6px 18px rgba(12,40,70,0.08);
+}
+
+.gs-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 26px rgba(12,40,70,0.12);
+}
+
+/* Icon */
+.gs-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+}
+
+/* ------------------------------------------- */
+/* STATES */
+/* ------------------------------------------- */
+
+.gs-btn-main.on {
+  background: linear-gradient(135deg,#dff6ff,#eefbff);
+  border: 1px solid rgba(0,170,255,0.12);
+}
+
+.gs-btn-main.off {
+  background: linear-gradient(135deg,#fff6f8,#fff);
+  border: 1px solid rgba(255,30,60,0.15);
+  color: #8b0a1c;
+}
+
+.gs-btn-accent {
+  background: linear-gradient(135deg,#fff4e1,#ffe7bf);
+  border: 1px solid rgba(255,160,50,0.18);
+}
+
+.gs-btn-accent.sharing {
+  box-shadow: 0 8px 30px rgba(255,160,50,0.25);
+}
+
+.gs-btn-ghost {
+  background: rgba(255,255,255,0.85);
+  border: 1px dashed rgba(150,150,170,0.25);
+}
+
+.gs-btn-danger {
+  background: linear-gradient(135deg,#ffd6dc,#ffb9c7);
+  border: 1px solid rgba(255,50,90,0.25);
+  color: #7a0820;
+}
+
+/* ------------------------------------------- */
+/* HOST APPROVAL PANEL */
+/* ------------------------------------------- */
+
+.gs-approvals {
+  min-width: 260px;
+  max-width: 320px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.96),
+    rgba(247,247,255,0.94)
+  );
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gs-approveTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #25323a;
+}
+
+.gs-noPending {
+  font-size: 13px;
+  color: #667;
+  padding: 6px 4px;
+}
+
+.gs-pendingList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 230px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.gs-pendingItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(220,225,235,0.7);
+  border-radius: 10px;
+  align-items: center;
+}
+
+.gs-pendingMeta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.gs-pendingAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg,#ffd7ef,#c6d0ff);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #222;
+}
+
+.gs-pendingName {
+  font-weight: 700;
+  color: #1d2b36;
+}
+
+.gs-approveBtn {
+  background: linear-gradient(135deg,#dff6ff,#e8f6ff);
+  border: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #006aa3;
+}
+
+.gs-approveBtn:hover {
+  transform: translateY(-3px);
+}
+
+/* ------------------------------------------- */
+/* RESPONSIVE */
+/* ------------------------------------------- */
+
+@media (max-width: 780px) {
+  .gs-approvals {
+    display: none; /* hide approvals on phones */
+  }
+
+  .gs-label {
+    display: none; /* hide button text on mobile */
+  }
+
+  .gs-btn {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+
+  .gs-controlsBubble {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+}

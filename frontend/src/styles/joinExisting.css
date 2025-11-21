@@ -1,0 +1,168 @@
+/* ================================
+   GEN-Z JOIN PAGE (MATCHES LANDING)
+   ================================ */
+
+.joinWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(to bottom, #eefdff, #ffffff);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Floating soft shapes */
+.joinShape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.35;
+  filter: blur(40px);
+  z-index: -1;
+}
+
+.shapeA {
+  width: 220px;
+  height: 220px;
+  background: #ffc1e3;
+  top: -40px;
+  left: -30px;
+}
+
+.shapeB {
+  width: 300px;
+  height: 300px;
+  background: #c7d6ff;
+  bottom: -50px;
+  right: 10px;
+}
+
+.shapeC {
+  width: 160px;
+  height: 160px;
+  background: #afffe3;
+  top: 50%;
+  left: 45%;
+  transform: translate(-50%, -50%);
+}
+
+/* ========== CARD ========== */
+
+.joinCard {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  border-radius: 22px;
+  padding: 38px 32px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.10);
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.joinCard h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0095ff;
+  margin-bottom: 8px;
+}
+
+.joinDesc {
+  color: #444;
+  margin-bottom: 24px;
+  font-size: 1rem;
+}
+
+/* Input */
+
+.joinInput {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #c8d4df;
+  border-radius: 12px;
+  font-size: 1rem;
+  outline: none;
+  background: #f9fcff;
+  transition: 0.2s;
+}
+
+.joinInput:focus {
+  border-color: #0095ff;
+  box-shadow: 0 0 8px rgba(0, 149, 255, 0.3);
+}
+
+/* Buttons */
+
+.joinButtons {
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+  justify-content: center;
+}
+
+.bubbleBtn {
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.bubbleBtn.primary {
+  background: #0095ff;
+  color: white;
+  box-shadow: 0 4px 14px rgba(0, 149, 255, 0.35);
+}
+
+.bubbleBtn.primary:hover {
+  transform: scale(1.04);
+}
+
+.bubbleBtn.outline {
+  background: white;
+  color: #0095ff;
+  border: 2px solid #0095ff;
+}
+
+.bubbleBtn.outline:hover {
+  transform: scale(1.04);
+}
+
+/* Tip text */
+.tipText {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* ===========================
+   RESPONSIVE FIXES (MOBILE)
+   =========================== */
+
+@media (max-width: 480px) {
+  .joinCard {
+    padding: 28px 22px;
+  }
+
+  .joinButtons {
+    flex-direction: column;
+  }
+
+  .bubbleBtn {
+    width: 100%;
+  }
+
+  .shapeA { width: 150px; height: 150px; }
+  .shapeB { width: 200px; height: 200px; }
+  .shapeC { width: 120px; height: 120px; }
+}

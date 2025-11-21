@@ -1,0 +1,43 @@
+/* frontend/src/styles/videoComponent.module.css - modern dark meeting layout */
+.meetVideoContainer {
+  display: flex;
+  gap: 24px;
+  padding: 28px;
+  align-items: flex-start;
+}
+.chatRoom {
+  width: 360px;
+  background: linear-gradient(180deg, rgba(22,20,30,0.9), rgba(18,16,26,0.9));
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  color: #e9e9ee;
+}
+.chatContainer h1 { margin-bottom: 8px; }
+.chattingDisplay {
+  min-height: 220px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 10px;
+  background: rgba(255,255,255,0.01);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.chattingArea { display:flex; gap:8px; align-items:center; }
+.chattingArea input { flex:1; padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); background: transparent; color: #e9e9ee; }
+.buttonContainers {
+  display:flex;
+  justify-content:center;
+  gap: 16px;
+  margin: 16px 0;
+  width: 100%;
+}
+.meetUserVideo {
+  width: 76%;
+  height: 380px;
+  background: #000;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.conferenceView { display:flex; gap: 12px; flex-wrap: wrap; width: 100%; padding-top: 8px; }
+.conferenceView video { width: 220px; height: 140px; object-fit: cover; border-radius: 8px; background: #000; }
