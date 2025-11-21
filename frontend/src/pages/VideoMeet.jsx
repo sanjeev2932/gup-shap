@@ -1,21 +1,17 @@
-import React, { useEffect, useRef, useState, useContext } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import CallControls from "../components/CallControls";
 import VideoTile from "../components/VideoTile";
-import { AuthContext } from "../contexts/AuthContext";
 import "../styles/videoComponent.css";
 import "../styles/videoMeetOverrides.css";
 
-// IMPORTANT: WebSocket URL (NOT https://)
-const SIGNAL_SERVER = "wss://gup-shapbackend.onrender.com";
+const SIGNAL_SERVER = "https://gup-shapbackend.onrender.com";
 
 export default function VideoMeet() {
   const localRef = useRef();
   const peersRef = useRef({});
   const socketRef = useRef();
   const localStreamRef = useRef(null);
-
-  const { addToUserHistory } = useContext(AuthContext);
 
   const [roomId, setRoomId] = useState("");
   const [participants, setParticipants] = useState([]);
@@ -29,15 +25,13 @@ export default function VideoMeet() {
     setTimeout(() => setToast(""), t);
   }
 
-  // ---------------- INIT SOCKET ----------------
   useEffect(() => {
     const room = window.location.pathname.split("/")[2] || "lobby";
     setRoomId(room);
 
     socketRef.current = io(SIGNAL_SERVER, {
       transports: ["websocket"],
-      secure: true,
-      rejectUnauthorized: false
+      secure: true
     });
 
     socketRef.current.on("connect", () => {
@@ -48,10 +42,6 @@ export default function VideoMeet() {
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
       await startLocalMedia(payload.members || []);
-
-      // SAVE MEETING HISTORY
-      addToUserHistory(room);
-
       showToast("You joined the room");
     });
 
@@ -78,7 +68,7 @@ export default function VideoMeet() {
 
     socketRef.current.on("user-left", ({ id }) => {
       const pc = peersRef.current[id];
-      if (pc) { try { pc.close(); } catch {}; delete peersRef.current[id]; }
+      if (pc) { try { pc.close(); } catch {} delete peersRef.current[id]; }
       removeRemoteStream(id);
       setParticipants(prev => prev.filter(p => p.id !== id));
     });
@@ -86,7 +76,6 @@ export default function VideoMeet() {
     return () => cleanup();
   }, []);
 
-  // ---------------- LOCAL MEDIA ----------------
   async function startLocalMedia(existingMembers = []) {
     if (!localStreamRef.current) {
       try {
@@ -107,7 +96,6 @@ export default function VideoMeet() {
     }
   }
 
-  // ---------------- PEERS ----------------
   async function createPeerAndOffer(remoteId) {
     if (peersRef.current[remoteId]) return;
 
@@ -152,11 +140,10 @@ export default function VideoMeet() {
     socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
   }
 
-  // ---------------- STREAM ATTACH ----------------
   function attachRemoteStream(peerId, stream) {
     setStreams(prev => ({ ...prev, [peerId]: stream }));
     setParticipants(prev => {
-      if (!prev.find(p => p.id === peerId)) return [...prev, { id: peerId, username: peerId }];
+      if (!prev.find(p => p.id === peerId)) return [...prev, { id: peerId }];
       return prev;
     });
   }
@@ -169,7 +156,6 @@ export default function VideoMeet() {
     });
   }
 
-  // ---------------- CONTROLS ----------------
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
@@ -189,7 +175,6 @@ export default function VideoMeet() {
     window.location.href = "/";
   };
 
-  // ---------------- CLEANUP ----------------
   function cleanup() {
     try { socketRef.current?.disconnect(); } catch {}
     localStreamRef.current?.getTracks().forEach(t => t.stop());
@@ -197,7 +182,6 @@ export default function VideoMeet() {
     peersRef.current = {};
   }
 
-  // ---------------- UI ----------------
   return (
     <div className="video-container">
       <div className="topbar">
