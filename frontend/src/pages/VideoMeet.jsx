@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import CallControls from "../components/CallControls";
 import VideoTile from "../components/VideoTile";
 import "../styles/videoComponent.css";
-import "../styles/videoMeetCute.css";         // NEW custom styles
+import "../styles/videoMeetCute.css";
 import server from "../environment";
 
 // Dummy speaking logic (replace with real volume detection for production)
@@ -25,25 +25,94 @@ export default function VideoMeet() {
   const [ready, setReady] = useState(false);
   const [screenActive, setScreenActive] = useState(false);
 
-  // ----- Socket & join logic unchanged -----
-
   function showToast(msg, t = 2500) {
     setToast(msg);
     setTimeout(() => setToast(""), t);
   }
 
-  async function handleJoin() {
-    try {
-      await startLocalMedia();
-      setReady(true);
-    } catch (e) {
-      console.warn("handleJoin error", e);
+  async function startLocalMedia() {
+    if (!localStreamRef.current) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localStreamRef.current = stream;
+        if (localRef.current) localRef.current.srcObject = stream;
+        setMicOn(Boolean(stream.getAudioTracks()[0]?.enabled));
+        setCamOn(Boolean(stream.getVideoTracks()[0]?.enabled));
+      } catch (err) {
+        console.warn("getUserMedia error:", err);
+        if (err.name === "NotAllowedError") {
+          showToast("Camera/Microphone permission denied");
+        } else {
+          showToast("Unable to access camera/microphone");
+        }
+        throw err;
+      }
     }
+  }
+
+  async function createPeerAndOffer(remoteId) {
+    const pc = new window.RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+    peersRef.current[remoteId] = pc;
+
+    localStreamRef.current?.getTracks().forEach((track) => {
+      try {
+        pc.addTrack(track, localStreamRef.current);
+      } catch (err) {
+        console.warn("pc.addTrack failed", err);
+      }
+    });
+
+    pc.ontrack = (e) => attachRemoteStream(remoteId, e.streams[0]);
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        socketRef.current?.emit("signal", {
+          to: remoteId,
+          type: "candidate",
+          data: e.candidate,
+        });
+      }
+    };
+
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socketRef.current?.emit("signal", {
+        to: remoteId,
+        type: "offer",
+        data: offer,
+      });
+    } catch (err) {
+      console.warn("createPeerAndOffer error", err);
+    }
+  }
+
+  function cleanup() {
+    try { socketRef.current?.disconnect(); } catch {}
+    try { screenStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
+    try { localStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
+    for (const pc of Object.values(peersRef.current)) {
+      try { pc.close(); } catch {}
+    }
+    peersRef.current = {};
+    localStreamRef.current = null;
+    screenStreamRef.current = null;
+    setStreams({});
+    setParticipants([]);
+  }
+
+  function attachRemoteStream(peerId, stream) {
+    setStreams((prev) => ({ ...prev, [peerId]: stream }));
+    setParticipants((prev) => {
+      if (!prev.find((p) => p.id === peerId))
+        return [...prev, { id: peerId }];
+      return prev;
+    });
   }
 
   useEffect(() => {
     if (!ready) return;
-
     const room = window.location.pathname.split("/")[2] || "lobby";
     setRoomId(room);
 
@@ -75,14 +144,24 @@ export default function VideoMeet() {
       setParticipants(list || []);
     });
 
-    // ...rest unchanged (for brevity)
+    socketRef.current.on("user-left", ({ id }) => {
+      const pc = peersRef.current[id];
+      if (pc) {
+        try { pc.close(); } catch {}
+      }
+      delete peersRef.current[id];
+      setStreams((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      setParticipants((cur) => cur.filter((p) => p.id !== id));
+    });
 
     return () => cleanup();
   }, [ready]);
 
-  // ...rest unchanged (media, socket handlers etc.)
-
-  // Floating local video tile logic:
+  // Floating local video tile logic
   const tiles = Object.keys(streams).length === 0
     ? [{ id: "local", stream: localStreamRef.current, username: "You" }]
     : [
@@ -95,18 +174,12 @@ export default function VideoMeet() {
         { id: "local", stream: localStreamRef.current, username: "You" },
       ];
 
-  // Detect "presenting" (screen share) state — for demo, toggle when stream exists
   useEffect(() => {
     setScreenActive(Boolean(screenStreamRef.current));
   }, [screenStreamRef.current]);
 
-  // Dummy: mark local as speaking (replace with real logic)
-  const speakingId = getSpeakingId(participants);
-
-  // If only one participant (local), center & enlarge
+  const speakingId = getSpeakingId(participants); // replace with real detection
   const single = tiles.length === 1;
-
-  // ----- Render page -----
 
   // PRE-JOIN
   if (!ready) {
@@ -130,7 +203,6 @@ export default function VideoMeet() {
           {participants.length} participants
         </div>
       </div>
-
       <div className={`videoStageCute ${single ? "singleStage" : ""}`}>
         <div className={`videoGridCute${screenActive ? " presentingStage" : ""}`}>
           {tiles.map((tile) => (
@@ -139,7 +211,6 @@ export default function VideoMeet() {
               id={tile.id}
               username={tile.username}
               stream={tile.stream}
-              // Visual props:
               active={tile.id === speakingId}
               sharing={screenActive && tile.id === "local"}
               pinned={false}
@@ -147,7 +218,6 @@ export default function VideoMeet() {
           ))}
         </div>
       </div>
-
       <CallControls
         micOn={micOn}
         camOn={camOn}
@@ -157,7 +227,6 @@ export default function VideoMeet() {
         onStartScreenShare={() => {}}
         onStopScreenShare={() => {}}
       />
-
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
