@@ -1,5 +1,6 @@
 const API_BASE = `${process.env.REACT_APP_SERVER_URL}/api/v1`;
 
+
 async function safeParse(res) {
   const text = await res.text();
   try { return JSON.parse(text); }
