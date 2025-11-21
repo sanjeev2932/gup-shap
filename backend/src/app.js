@@ -1,30 +1,30 @@
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import userRoutes from "./routes/users.routes.js";
 import dotenv from "dotenv";
+
+import userRoutes from "./routes/users.routes.js";
+import historyRoutes from "./routes/history.routes.js";
 
 dotenv.config();
 
 const app = express();
 
-// MIDDLEWARE
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// CONNECT MONGODB
+// Connect DB
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch(err => console.log("MongoDB error:", err));
 
-// ROUTES
-app.use("/api/users", userRoutes);
+// API ROUTES — FIXED PREFIX
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/history", historyRoutes);
 
-// ROOT TEST
+// Root test
 app.get("/", (req, res) => {
   res.json({ message: "Backend running 🚀" });
 });
