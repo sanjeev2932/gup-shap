@@ -17,7 +17,8 @@ export function AuthProvider({ children }) {
 
   // Build API base reliably:
   // server => "https://host" ; we want "https://host/api/v1"
-  const API = `${server}/api/v1`;
+ const API = `${process.env.REACT_APP_SERVER_URL}/api/v1`;
+
   // persist token
   useEffect(() => {
     if (token) localStorage.setItem("token", token);
