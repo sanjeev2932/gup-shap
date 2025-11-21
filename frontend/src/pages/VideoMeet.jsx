@@ -201,7 +201,6 @@ export default function VideoMeet() {
 
       peersRef.current[from] = pc;
 
-      if (!localStreamRef.current) await startLocalMedia();
 
       localStreamRef.current?.getTracks().forEach((t) => {
         try {
