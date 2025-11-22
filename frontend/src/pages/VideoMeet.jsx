@@ -24,17 +24,16 @@ export default function VideoMeet() {
   const [ready, setReady] = useState(false);
   const [screenActive, setScreenActive] = useState(false);
 
-  // Approval logic
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [approved, setApproved] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState([]); // {userId, username}
+  const [pendingRequests, setPendingRequests] = useState([]);
 
   function showToast(msg, t = 2500) {
     setToast(msg);
     setTimeout(() => setToast(""), t);
   }
 
-  // Media helpers
+  // Media Helpers
   async function startLocalMedia() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -52,7 +51,7 @@ export default function VideoMeet() {
     }
   }
 
-  // ---- NEW: Media control handlers ----
+  // Mute/unmute
   function handleToggleMic() {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -67,7 +66,7 @@ export default function VideoMeet() {
       });
     }
   }
-
+  // Cam on/off
   function handleToggleCam() {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -82,7 +81,7 @@ export default function VideoMeet() {
       });
     }
   }
-
+  // Screen share
   async function handleStartScreenShare() {
     try {
       if (screenStreamRef.current) return;
@@ -90,19 +89,12 @@ export default function VideoMeet() {
       screenStreamRef.current = screenStream;
       setScreenActive(true);
 
-      // Replace video track for peers
       const screenTrack = screenStream.getVideoTracks()[0];
       for (const pc of Object.values(peersRef.current)) {
-        const sender = pc
-          .getSenders()
-          .find((s) => s.track && s.track.kind === "video");
+        const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
         if (sender) await sender.replaceTrack(screenTrack);
       }
-
-      // Show yourself the shared screen
       if (localRef.current) localRef.current.srcObject = screenStream;
-
-      // Reset when sharing ended
       screenTrack.onended = () => handleStopScreenShare();
     } catch (err) {
       showToast("Screen share failed");
@@ -111,39 +103,26 @@ export default function VideoMeet() {
 
   async function handleStopScreenShare() {
     if (!screenStreamRef.current) return;
-
     screenStreamRef.current.getTracks().forEach((t) => t.stop());
     screenStreamRef.current = null;
     setScreenActive(false);
-
-    // Restore camera track for peers
     const camTrack = localStreamRef.current?.getVideoTracks()[0];
     for (const pc of Object.values(peersRef.current)) {
-      const sender = pc
-        .getSenders()
-        .find((s) => s.track && s.track.kind === "video");
+      const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
       if (sender && camTrack) await sender.replaceTrack(camTrack);
     }
-
-    // Restore self-view
-    if (localRef.current && localStreamRef.current)
-      localRef.current.srcObject = localStreamRef.current;
+    if (localRef.current && localStreamRef.current) localRef.current.srcObject = localStreamRef.current;
   }
 
+  // ---- WebRTC peer logic ----
   async function createPeerAndOffer(remoteId) {
-    const pc = new window.RTCPeerConnection({
+    const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
     peersRef.current[remoteId] = pc;
-
     localStreamRef.current?.getTracks().forEach((track) => {
-      try {
-        pc.addTrack(track, localStreamRef.current);
-      } catch (err) {
-        console.warn("pc.addTrack failed", err);
-      }
+      try { pc.addTrack(track, localStreamRef.current); } catch {}
     });
-
     pc.ontrack = (e) => attachRemoteStream(remoteId, e.streams[0]);
     pc.onicecandidate = (e) => {
       if (e.candidate) {
@@ -154,7 +133,6 @@ export default function VideoMeet() {
         });
       }
     };
-
     try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -168,11 +146,138 @@ export default function VideoMeet() {
     }
   }
 
+  // ---- CRITICAL: Signal handling for all peers ----
+  useEffect(() => {
+    if (!ready) return;
+    const room = window.location.pathname.split("/")[2] || "lobby";
+    setRoomId(room);
+
+    socketRef.current = io(server, {
+      path: "/socket.io",
+      transports: ["websocket", "polling"],
+      secure: true,
+      autoConnect: true,
+    });
+
+    socketRef.current.on("connect", () => {
+      const username = localStorage.user
+        ? JSON.parse(localStorage.user).name
+        : "Guest";
+      socketRef.current.emit("join-request", { room, username });
+    });
+
+    // Host flow
+    socketRef.current.on("join-pending", ({ userId, username }) => {
+      setPendingRequests((reqs) => [...reqs, { userId, username }]);
+      setApprovalRequired(true);
+    });
+
+    socketRef.current.on("waiting-approval", ({ room }) => {
+      setApprovalRequired(true);
+      setApproved(false);
+      showToast("Waiting for Host Approval...");
+    });
+
+    socketRef.current.on("approved", (payload) => {
+      setApprovalRequired(false);
+      setApproved(true);
+      setParticipants(payload.members || []);
+      showToast("You have been approved! Joining room...");
+      for (const m of payload.members || []) {
+        if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
+          createPeerAndOffer(m.id);
+        }
+      }
+    });
+
+    socketRef.current.on("rejected", ({ room }) => {
+      setApprovalRequired(false);
+      setApproved(false);
+      showToast("You were not approved.");
+      setTimeout(() => window.location.href = "/", 2200);
+    });
+
+    socketRef.current.on("joined", async (payload) => {
+      setParticipants(payload.members || []);
+      if (payload.isHost) {
+        setApproved(true);
+        setApprovalRequired(false);
+        showToast("You joined as Host");
+      } else if (payload.approved) {
+        setApproved(true);
+        setApprovalRequired(false);
+        showToast("You joined the room");
+      }
+      for (const m of payload.members || []) {
+        if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
+          await createPeerAndOffer(m.id);
+        }
+      }
+    });
+
+    // ---- CRITICAL SIGNAL HANDLER ----
+    socketRef.current.on("signal", async ({ from, type, data }) => {
+      // OFFER: create pc, set remote, send answer
+      if (type === "offer") {
+        let pc = peersRef.current[from];
+        if (!pc) {
+          pc = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+          });
+          peersRef.current[from] = pc;
+          localStreamRef.current?.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
+          pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
+          pc.onicecandidate = (e) => {
+            if (e.candidate) {
+              socketRef.current?.emit("signal", {
+                to: from,
+                type: "candidate",
+                data: e.candidate,
+              });
+            }
+          };
+        }
+        await pc.setRemoteDescription(new RTCSessionDescription(data));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
+      }
+      // ANSWER: finish remote setup
+      if (type === "answer") {
+        const pc = peersRef.current[from];
+        if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data));
+      }
+      // CANDIDATE: add ICE
+      if (type === "candidate") {
+        const pc = peersRef.current[from];
+        if (pc) await pc.addIceCandidate(data);
+      }
+    });
+
+    socketRef.current.on("members", (list) => {
+      setParticipants(list || []);
+    });
+    socketRef.current.on("user-left", ({ id }) => {
+      const pc = peersRef.current[id];
+      if (pc) {
+        try { pc.close(); } catch {}
+      }
+      delete peersRef.current[id];
+      setStreams((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      setParticipants((cur) => cur.filter((p) => p.id !== id));
+    });
+
+    return () => cleanup();
+  }, [ready]);
+
   function attachRemoteStream(peerId, stream) {
     setStreams((prev) => ({ ...prev, [peerId]: stream }));
     setParticipants((prev) => {
-      if (!prev.find((p) => p.id === peerId))
-        return [...prev, { id: peerId }];
+      if (!prev.find((p) => p.id === peerId)) return [...prev, { id: peerId }];
       return prev;
     });
   }
@@ -200,98 +305,6 @@ export default function VideoMeet() {
     }
   }
 
-  useEffect(() => {
-    if (!ready) return;
-    const room = window.location.pathname.split("/")[2] || "lobby";
-    setRoomId(room);
-
-    socketRef.current = io(server, {
-      path: "/socket.io",
-      transports: ["websocket", "polling"],
-      secure: true,
-      autoConnect: true,
-    });
-
-    socketRef.current.on("connect", () => {
-      const username = localStorage.user
-        ? JSON.parse(localStorage.user).name
-        : "Guest";
-      socketRef.current.emit("join-request", { room, username });
-    });
-
-    // Host: listen for join requests
-    socketRef.current.on("join-pending", ({ userId, username }) => {
-      setPendingRequests((reqs) => [...reqs, { userId, username }]);
-      setApprovalRequired(true);
-    });
-
-    // Guest: waiting for approval
-    socketRef.current.on("waiting-approval", ({ room }) => {
-      setApprovalRequired(true);
-      setApproved(false);
-      showToast("Waiting for Host Approval...");
-    });
-
-    // Guest: was approved by host
-    socketRef.current.on("approved", (payload) => {
-      setApprovalRequired(false);
-      setApproved(true);
-      setParticipants(payload.members || []);
-      showToast("You have been approved! Joining room...");
-      for (const m of payload.members || []) {
-        if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
-          createPeerAndOffer(m.id);
-        }
-      }
-    });
-
-    // Guest: rejected by host
-    socketRef.current.on("rejected", ({ room }) => {
-      setApprovalRequired(false);
-      setApproved(false);
-      showToast("You were not approved.");
-      setTimeout(() => window.location.href = "/", 2200);
-    });
-
-    socketRef.current.on("joined", async (payload) => {
-      setParticipants(payload.members || []);
-      if (payload.isHost) {
-        setApproved(true);
-        setApprovalRequired(false);
-        showToast("You joined as Host");
-      } else if (payload.approved) {
-        setApproved(true);
-        setApprovalRequired(false);
-        showToast("You joined the room");
-      }
-      for (const m of payload.members || []) {
-        if (m.id !== socketRef.current.id && !peersRef.current[m.id]) {
-          await createPeerAndOffer(m.id);
-        }
-      }
-    });
-
-    socketRef.current.on("members", (list) => {
-      setParticipants(list || []);
-    });
-
-    socketRef.current.on("user-left", ({ id }) => {
-      const pc = peersRef.current[id];
-      if (pc) {
-        try { pc.close(); } catch {}
-      }
-      delete peersRef.current[id];
-      setStreams((prev) => {
-        const copy = { ...prev };
-        delete copy[id];
-        return copy;
-      });
-      setParticipants((cur) => cur.filter((p) => p.id !== id));
-    });
-
-    return () => cleanup();
-  }, [ready]);
-
   // Tiles logic - only users with streams (video) are shown
   const remoteIds = Object.keys(streams);
   const tiles = [
@@ -307,7 +320,6 @@ export default function VideoMeet() {
       : null,
   ].filter(Boolean);
 
-  // Big tile for only one participant; equal size for multiple 
   const isSingle = tiles.length === 1;
 
   useEffect(() => {
@@ -316,19 +328,18 @@ export default function VideoMeet() {
 
   const speakingId = getSpeakingId(participants);
 
-  // Host UI: approve/reject popups
   function handleApprove(userId) {
     socketRef.current.emit("approve-join", { room: roomId, userId });
     setPendingRequests((reqs) => reqs.filter((r) => r.userId !== userId));
     if (pendingRequests.length === 1) setApprovalRequired(false);
   }
+
   function handleReject(userId) {
     socketRef.current.emit("reject-join", { room: roomId, userId });
     setPendingRequests((reqs) => reqs.filter((r) => r.userId !== userId));
     if (pendingRequests.length === 1) setApprovalRequired(false);
   }
 
-  // PRE-JOIN
   if (!ready) {
     return (
       <div className="meet-cute-bg meet-center">
@@ -340,7 +351,6 @@ export default function VideoMeet() {
     );
   }
 
-  // Approval handling: guest view
   if (approvalRequired && !approved && pendingRequests.length === 0) {
     return (
       <div className="meet-cute-bg meet-center">
@@ -355,7 +365,6 @@ export default function VideoMeet() {
     );
   }
 
-  // Host: show requests to approve/reject
   if (approvalRequired && pendingRequests.length > 0) {
     return (
       <div className="meet-cute-bg meet-center">
