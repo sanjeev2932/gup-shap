@@ -1,3 +1,5 @@
+// gup-shap/backend/src/socket/socketManager.js
+
 import { Server } from "socket.io";
 
 const rooms = Object.create(null);
