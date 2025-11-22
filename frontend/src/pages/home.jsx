@@ -10,9 +10,15 @@ export default function Home() {
   useEffect(() => {
     document.body.classList.remove("dark-meeting");
     document.body.classList.add("light-mode");
+    setIsLoggedIn(!!localStorage.getItem("token"));
+  }, []);
 
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
+  // Update isLoggedIn if token is added/removed during session
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsLoggedIn(!!localStorage.getItem("token"));
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Meeting actions: require login, but do NOT redirect on page load
@@ -87,6 +93,11 @@ export default function Home() {
             <button className="btn-primary" onClick={handleJoin}>Join</button>
             <button className="btn-secondary" onClick={createNew}>New</button>
           </div>
+          {!isLoggedIn && (
+            <div style={{ color: "#db2462", marginTop: "18px", fontWeight: "600" }}>
+              Please login to start or join meetings!
+            </div>
+          )}
         </div>
         {/* RIGHT SIDE IMAGE */}
         <div className="rightBlock">

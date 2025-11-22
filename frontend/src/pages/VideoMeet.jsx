@@ -34,8 +34,8 @@ export default function VideoMeet() {
     setTimeout(() => setToast(""), t);
   }
 
+  // Media helpers
   async function startLocalMedia() {
-    // Always fetch media on join for reliability
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
@@ -50,6 +50,84 @@ export default function VideoMeet() {
       }
       throw err;
     }
+  }
+
+  // ---- NEW: Media control handlers ----
+  function handleToggleMic() {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const track = stream.getAudioTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setMicOn(track.enabled);
+      socketRef.current?.emit("media-update", {
+        room: roomId,
+        mic: track.enabled,
+        cam: camOn,
+      });
+    }
+  }
+
+  function handleToggleCam() {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setCamOn(track.enabled);
+      socketRef.current?.emit("media-update", {
+        room: roomId,
+        mic: micOn,
+        cam: track.enabled,
+      });
+    }
+  }
+
+  async function handleStartScreenShare() {
+    try {
+      if (screenStreamRef.current) return;
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenStreamRef.current = screenStream;
+      setScreenActive(true);
+
+      // Replace video track for peers
+      const screenTrack = screenStream.getVideoTracks()[0];
+      for (const pc of Object.values(peersRef.current)) {
+        const sender = pc
+          .getSenders()
+          .find((s) => s.track && s.track.kind === "video");
+        if (sender) await sender.replaceTrack(screenTrack);
+      }
+
+      // Show yourself the shared screen
+      if (localRef.current) localRef.current.srcObject = screenStream;
+
+      // Reset when sharing ended
+      screenTrack.onended = () => handleStopScreenShare();
+    } catch (err) {
+      showToast("Screen share failed");
+    }
+  }
+
+  async function handleStopScreenShare() {
+    if (!screenStreamRef.current) return;
+
+    screenStreamRef.current.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current = null;
+    setScreenActive(false);
+
+    // Restore camera track for peers
+    const camTrack = localStreamRef.current?.getVideoTracks()[0];
+    for (const pc of Object.values(peersRef.current)) {
+      const sender = pc
+        .getSenders()
+        .find((s) => s.track && s.track.kind === "video");
+      if (sender && camTrack) await sender.replaceTrack(camTrack);
+    }
+
+    // Restore self-view
+    if (localRef.current && localStreamRef.current)
+      localRef.current.srcObject = localStreamRef.current;
   }
 
   async function createPeerAndOffer(remoteId) {
@@ -337,11 +415,12 @@ export default function VideoMeet() {
       <CallControls
         micOn={micOn}
         camOn={camOn}
-        onToggleMic={() => {}}
-        onToggleCam={() => {}}
+        onToggleMic={handleToggleMic}
+        onToggleCam={handleToggleCam}
         onEndCall={() => window.location.href = "/"}
-        onStartScreenShare={() => {}}
-        onStopScreenShare={() => {}}
+        onStartScreenShare={handleStartScreenShare}
+        onStopScreenShare={handleStopScreenShare}
+        isSharingScreen={screenActive}
       />
       {toast && <div className="toast">{toast}</div>}
     </div>
