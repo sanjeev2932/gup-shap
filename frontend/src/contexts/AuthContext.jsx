@@ -17,7 +17,8 @@ export function AuthProvider({ children }) {
 
   // Build API base reliably:
   // server => "https://host" ; we want "https://host/api/v1"
-  const API = `${server}/api/v1`;
+ const API = `${server}/api/v1`;
+
 
   // persist token
   useEffect(() => {
@@ -37,32 +38,23 @@ export function AuthProvider({ children }) {
       }
       return { ok: false, message: res?.data?.message || "Login failed" };
     } catch (err) {
-      return {
-        ok: false,
-        message: err?.response?.data?.message || err.message || "Network error",
-      };
+      // Return friendly error to UI (avoid raw stack)
+      return { ok: false, message: err?.response?.data?.message || err.message || "Network error" };
     }
   };
 
   // REGISTER
   const register = async (name, username, password) => {
     try {
-      const res = await axios.post(`${API}/users/register`, {
-        name,
-        username,
-        password,
-      });
+      const res = await axios.post(`${API}/users/register`, { name, username, password });
       if (res?.data?.success) return { ok: true };
       return { ok: false, message: res?.data?.message || "Registration failed" };
     } catch (err) {
-      return {
-        ok: false,
-        message: err?.response?.data?.message || err.message || "Network error",
-      };
+      return { ok: false, message: err?.response?.data?.message || err.message || "Network error" };
     }
   };
 
-  // ADD TO USER HISTORY (raw)
+  // ADD TO USER HISTORY
   const addToUserHistory = async (roomId) => {
     if (!token) return { ok: false, message: "Not authenticated" };
     try {
@@ -74,21 +66,7 @@ export function AuthProvider({ children }) {
       return { ok: true };
     } catch (err) {
       console.log("History Add Error:", err?.response || err);
-      return {
-        ok: false,
-        message: err?.response?.data?.message || err.message || "Failed",
-      };
-    }
-  };
-
-  // Convenience: track a meeting once per tab + roomId
-  const trackMeeting = async (roomId) => {
-    if (!roomId || !token) return;
-    const key = `tracked_room_${roomId}`;
-    if (sessionStorage.getItem(key)) return; // already logged this meeting in this tab
-    const res = await addToUserHistory(roomId);
-    if (res.ok) {
-      sessionStorage.setItem(key, "1");
+      return { ok: false, message: err?.response?.data?.message || err.message || "Failed" };
     }
   };
 
@@ -99,8 +77,7 @@ export function AuthProvider({ children }) {
       const res = await axios.get(`${API}/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Controller returns { success, history: [...] }
-      return Array.isArray(res?.data?.history) ? res.data.history : [];
+      return res?.data?.history || [];
     } catch (err) {
       console.log("History Fetch Error:", err?.response || err);
       return [];
@@ -108,4 +85,26 @@ export function AuthProvider({ children }) {
   };
 
   // LOGOUT
-  const logout =
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        register,
+        logout,
+        addToUserHistory,
+        getUserHistory,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
