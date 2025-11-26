@@ -1,13 +1,11 @@
-/* Cute, dreamy sky blue gradient + soft cloud overlay */
+/* Meet / Call background — deep cerulean crayon */
 .meet-cute-bg, .meet-page-cute {
   min-height: 100vh;
   width: 100vw;
   background:
-    linear-gradient(132deg, #d6ecff 0%, #e9f7fc 100%),
-    radial-gradient(ellipse 75% 40% at 50% 10%, #f7fbff 70%, transparent 100%),
-    radial-gradient(ellipse 60% 30% at 25% 80%, #ebf6ff 40%, transparent 98%);
+    linear-gradient(180deg, #0b6c8f 0%, #0a6a8b 45%, #095f7c 100%);
   position: relative;
-  box-shadow: 0 0 0 1px #eaf6fe;
+  box-shadow: 0 0 0 1px #07475f;
 }
 
 /* Remove white or solid backgrounds from child containers */
@@ -18,7 +16,7 @@
 /* Topbar styling */
 .topbar {
   padding: 24px 36px 0 36px;
-  color: #324060;
+  color: #e9f5ff;
   font-weight: 700;
   font-size: 21px;
 }
@@ -49,39 +47,45 @@
   width: 430px;
   height: 295px;
   max-width: 96vw;
-  border-radius: 30px;
-  border: 8px solid #fbf4fb !important;
-  background: #f2fbff;
-  box-shadow: 0 3px 18px rgb(160 210 255 / 19%);
+  border-radius: 32px;
+  border: 14px solid #f1fbff !important; /* thicker, matches cerulean */
+  background: #f8fcff;
+  box-shadow: 0 10px 36px rgba(5, 37, 57, 0.55);
   margin: 0 !important;
-  transition: border-color 0.35s, box-shadow 0.3s;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
   position: relative;
   z-index: 1;
 }
 
 /* Single stage main tile */
 .singleStage .participantTile {
-  width: 540px !important;
-  height: 340px !important;
+  width: 560px !important;
+  height: 360px !important;
   margin: 0 auto;
   border-radius: 40px;
-  border: 11px solid #fbecec !important;
-  background: #f3faff;
-  box-shadow: 0 10px 70px 8px #cbeffdcc;
-  transition: border-color 0.35s, box-shadow 0.3s;
+  border: 16px solid #f1fbff !important;
+  background: #f5fbff;
+  box-shadow: 0 18px 70px rgba(3, 27, 44, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Speaking: glow and 2x grow! */
+/* Speaking: very subtle emphasis in grid mode */
 .participantTile.active {
-  box-shadow: 0 16px 90px 2px #c1eaffdd, 0 4px 36px #ffd6f655;
-  border-color: #fff8dd !important;
-  transform: scale(2.0);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85),
+              0 10px 40px rgba(2, 50, 82, 0.7);
+  border-color: #ffffff !important;
+  transform: scale(1.03);
   z-index: 6;
-  transition: transform 0.4s, box-shadow 0.3s, border-color 0.3s;
-  background: #ebfbfe !important;
+  background: #ecf7ff !important;
+}
+
+/* Do NOT scale active tile while screen sharing */
+.screenShareRow .participantTile.active,
+.cameraRow .participantTile.active {
+  transform: none;
+  box-shadow: 0 4px 18px rgba(2, 40, 70, 0.7);
 }
 
 /* === SCREEN SHARE SPLIT LAYOUT === */
@@ -90,29 +94,32 @@
   justify-content: center;
   align-items: center;
   width: 100%;
-  margin-top: 24px;
+  margin-top: 30px;
 }
+
 .cameraRow {
   display: flex;
   flex-direction: row;
   justify-content: center;
   align-items: flex-start;
   width: 100%;
-  gap: 30px;
+  gap: 26px;
   margin-top: 30px;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
+  flex-wrap: nowrap;
 }
 
-/* The big screen share tile */
+/* Big screen share tile */
 .participantTile.screenTile {
-  width: 910px !important;
-  height: 515px !important;
+  width: 960px !important;
+  height: 540px !important;
   max-width: 97vw;
   max-height: 60vh;
+  border-radius: 34px;
   z-index: 11;
-  box-shadow: 0 10px 70px 8px #ffe9adcc;
-  border: 10px solid #fff4e1 !important;
-  background: #fcf4e9 !important;
+  box-shadow: 0 22px 90px rgba(0, 0, 0, 0.7);
+  border: 18px solid #fff7e3 !important;
+  background: #fff7e3 !important;
   opacity: 1 !important;
   display: flex;
   justify-content: center;
@@ -121,16 +128,16 @@
 
 /* Camera tiles below during screen share */
 .cameraRow .participantTile {
-  width: 180px !important;
-  height: 110px !important;
-  opacity: 0.92 !important;
-  border-radius: 15px !important;
-  border-width: 6px !important;
+  width: 190px !important;
+  height: 120px !important;
+  opacity: 0.97 !important;
+  border-radius: 22px !important;
+  border-width: 12px !important;
+  border-color: #f1fbff !important;
   z-index: 1;
-  box-shadow: 0 2px 10px 1px #eecdf3;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
   margin: 0 !important;
-  transition: transform 0.30s, box-shadow 0.20s, border-color 0.20s;
-  background: #f2fbff;
+  background: #f7fcff;
 }
 
 /* Video element inside tile */
@@ -148,28 +155,46 @@
   position: absolute;
   bottom: 14px;
   left: 20px;
-  background: #b5e2ffcc;
-  color: #563f6a;
+  background: rgba(0, 0, 0, 0.65);
+  color: #f7fbff;
   padding: 9px 24px;
-  border-radius: 22px;
+  border-radius: 24px;
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.2px;
-  box-shadow: 0 2px 12px 2px #aee3ffc8;
-  backdrop-filter: blur(3.5px);
-  border: 2px solid #e5cadb;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
-/* Responsive for cute vibes */
-@media(max-width: 1200px) {
+/* Responsive for cerulean layout */
+@media (max-width: 1200px) {
   .participantTile.screenTile {
-    width: 99vw !important;
-    height: 220px !important;
-    max-height: 38vw;
-  }
-  .tileLabel { font-size: 14px; padding: 7px 12px; }
-  .cameraRow .participantTile {
     width: 98vw !important;
-    height: 130px !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    max-height: 55vh;
+  }
+
+  .cameraRow {
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+
+  .cameraRow .participantTile {
+    width: 44vw !important;
+    height: 120px !important;
+  }
+
+  .tileLabel {
+    font-size: 14px;
+    padding: 7px 14px;
+  }
+}
+
+@media (max-width: 700px) {
+  .cameraRow .participantTile {
+    width: 46vw !important;
+    height: 105px !important;
   }
 }
