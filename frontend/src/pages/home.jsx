@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/home.css";
+import { AuthContext } from "../contexts/AuthContext";
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user, addToUserHistory } = useContext(AuthContext);
+
   const [meetingCode, setMeetingCode] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
 
@@ -20,25 +23,44 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Guest or user can always join with code
-  const handleJoin = () => {
+  // Join an existing meeting by code (guest or logged in)
+  const handleJoin = async () => {
     const code = meetingCode.trim();
     if (!code) {
       alert("Enter a valid meeting code.");
       return;
     }
+
+    // If user is logged in, record history
+    if (isLoggedIn) {
+      try {
+        await addToUserHistory(code);
+      } catch (e) {
+        console.warn("Failed to save history for join:", e);
+      }
+    }
+
     navigate(`/meet/${code}`);
   };
 
   // Only logged-in users can create a new meeting
-  const createNew = () => {
+  const createNew = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
       alert("You must sign in first.");
       navigate("/auth#signin");
       return;
     }
+
     const rnd = Math.random().toString(36).substring(2, 9);
+
+    // Save new meeting to history for logged‑in host
+    try {
+      await addToUserHistory(rnd);
+    } catch (e) {
+      console.warn("Failed to save history for new meeting:", e);
+    }
+
     navigate(`/meet/${rnd}`);
   };
 
@@ -60,17 +82,26 @@ export default function Home() {
         <div className="navRight">
           {isLoggedIn ? (
             <>
-              <button className="historyBtn" onClick={() => navigate("/history")}>History</button>
-              <button className="logoutBtn" onClick={logout}>Logout</button>
+              <button className="historyBtn" onClick={() => navigate("/history")}>
+                History
+              </button>
+              <button className="logoutBtn" onClick={logout}>
+                Logout
+              </button>
             </>
           ) : (
             <>
-              <button className="loginBtn" onClick={login}>Login</button>
-              <button className="registerBtn" onClick={register}>Register</button>
+              <button className="loginBtn" onClick={login}>
+                Login
+              </button>
+              <button className="registerBtn" onClick={register}>
+                Register
+              </button>
             </>
           )}
         </div>
       </header>
+
       {/* MAIN */}
       <main className="homeMain">
         <div className="leftBlock">
@@ -80,6 +111,7 @@ export default function Home() {
           <p className="subtitle">
             Enter a meeting code or create a new meeting to get started.
           </p>
+
           <div className="actionsRow">
             <input
               className="meetingInput"
@@ -96,12 +128,20 @@ export default function Home() {
               </button>
             )}
           </div>
+
           {!isLoggedIn && (
-            <div style={{ color: "#db2462", marginTop: "18px", fontWeight: "600" }}>
+            <div
+              style={{
+                color: "#db2462",
+                marginTop: "18px",
+                fontWeight: "600",
+              }}
+            >
               Please login to start a new meeting!
             </div>
           )}
         </div>
+
         {/* RIGHT SIDE IMAGE */}
         <div className="rightBlock">
           <img src="/mobile.png" className="homeImage" alt="illustration" />
