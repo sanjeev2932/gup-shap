@@ -1,3 +1,5 @@
+// frontend/src/pages/authentication.jsx
+
 import React, { useEffect, useState } from "react";
 import "../styles/authNew.css";
 import { post } from "../utils/api";

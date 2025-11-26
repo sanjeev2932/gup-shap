@@ -21,19 +21,18 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Meeting actions: require login, but do NOT redirect on page load
+  // Join: now allows guest (no login needed)
   const handleJoin = () => {
     const code = meetingCode.trim();
-    if (!code) return alert("Enter a valid meeting code.");
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("You must sign in first.");
-      navigate("/auth#signin");
+    if (!code) {
+      alert("Enter a valid meeting code.");
       return;
     }
+    // No login check—anyone can join as guest!
     navigate(`/meet/${code}`);
   };
 
+  // "New" meeting is login-protected
   const createNew = () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -90,12 +89,16 @@ export default function Home() {
               value={meetingCode}
               onChange={(e) => setMeetingCode(e.target.value)}
             />
-            <button className="btn-primary" onClick={handleJoin}>Join</button>
-            <button className="btn-secondary" onClick={createNew}>New</button>
+            <button className="btn-primary" onClick={handleJoin}>
+              Join with Code as Guest
+            </button>
+            <button className="btn-secondary" onClick={createNew}>
+              New
+            </button>
           </div>
           {!isLoggedIn && (
             <div style={{ color: "#db2462", marginTop: "18px", fontWeight: "600" }}>
-              Please login to start or join meetings!
+              Please login to start a new meeting!
             </div>
           )}
         </div>
