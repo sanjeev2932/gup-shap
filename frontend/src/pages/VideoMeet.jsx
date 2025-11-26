@@ -22,7 +22,7 @@ export default function VideoMeet() {
   const [camOn, setCamOn] = useState(true);
   const [toast, setToast] = useState("");
   const [ready, setReady] = useState(false);
-  // NEW: sharingId state (syncs who is sharing across all clients)
+  // Syncs who is sharing across all clients
   const [sharingId, setSharingId] = useState(null);
 
   const [approvalRequired, setApprovalRequired] = useState(false);
@@ -36,7 +36,10 @@ export default function VideoMeet() {
 
   async function startLocalMedia() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
       localStreamRef.current = stream;
       if (localRef.current) localRef.current.srcObject = stream;
       setMicOn(Boolean(stream.getAudioTracks()[0]?.enabled));
@@ -84,15 +87,23 @@ export default function VideoMeet() {
   async function handleStartScreenShare() {
     try {
       if (screenStreamRef.current) return;
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      });
       screenStreamRef.current = screenStream;
+
       // Broadcast that this user is sharing
-      socketRef.current.emit("screen-share-started", { sharingId: socketRef.current.id, room: roomId });
+      socketRef.current.emit("screen-share-started", {
+        sharingId: socketRef.current.id,
+        room: roomId,
+      });
 
       // Replace outgoing video tracks for all peers
       const screenTrack = screenStream.getVideoTracks()[0];
       for (const pc of Object.values(peersRef.current)) {
-        const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+        const sender = pc
+          .getSenders()
+          .find((s) => s.track && s.track.kind === "video");
         if (sender) await sender.replaceTrack(screenTrack);
       }
       if (localRef.current) localRef.current.srcObject = screenStream;
@@ -106,14 +117,20 @@ export default function VideoMeet() {
     if (!screenStreamRef.current) return;
     screenStreamRef.current.getTracks().forEach((t) => t.stop());
     screenStreamRef.current = null;
+
     // Broadcast stopped sharing
     socketRef.current.emit("screen-share-stopped", { room: roomId });
+
     const camTrack = localStreamRef.current?.getVideoTracks()[0];
     for (const pc of Object.values(peersRef.current)) {
-      const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+      const sender = pc
+        .getSenders()
+        .find((s) => s.track && s.track.kind === "video");
       if (sender && camTrack) await sender.replaceTrack(camTrack);
     }
-    if (localRef.current && localStreamRef.current) localRef.current.srcObject = localStreamRef.current;
+    if (localRef.current && localStreamRef.current) {
+      localRef.current.srcObject = localStreamRef.current;
+    }
   }
 
   async function createPeerAndOffer(remoteId) {
@@ -122,7 +139,9 @@ export default function VideoMeet() {
     });
     peersRef.current[remoteId] = pc;
     localStreamRef.current?.getTracks().forEach((track) => {
-      try { pc.addTrack(track, localStreamRef.current); } catch {}
+      try {
+        pc.addTrack(track, localStreamRef.current);
+      } catch {}
     });
     pc.ontrack = (e) => attachRemoteStream(remoteId, e.streams[0]);
     pc.onicecandidate = (e) => {
@@ -204,7 +223,7 @@ export default function VideoMeet() {
       setApprovalRequired(false);
       setApproved(false);
       showToast("You were not approved.");
-      setTimeout(() => window.location.href = "/", 2200);
+      setTimeout(() => (window.location.href = "/"), 2200);
     });
 
     socketRef.current.on("joined", async (payload) => {
@@ -233,7 +252,9 @@ export default function VideoMeet() {
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
           });
           peersRef.current[from] = pc;
-          localStreamRef.current?.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
+          localStreamRef.current
+            ?.getTracks()
+            .forEach((track) => pc.addTrack(track, localStreamRef.current));
           pc.ontrack = (e) => attachRemoteStream(from, e.streams[0]);
           pc.onicecandidate = (e) => {
             if (e.candidate) {
@@ -248,7 +269,11 @@ export default function VideoMeet() {
         await pc.setRemoteDescription(new RTCSessionDescription(data));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
+        socketRef.current.emit("signal", {
+          to: from,
+          type: "answer",
+          data: answer,
+        });
       }
       if (type === "answer") {
         const pc = peersRef.current[from];
@@ -263,10 +288,13 @@ export default function VideoMeet() {
     socketRef.current.on("members", (list) => {
       setParticipants(list || []);
     });
+
     socketRef.current.on("user-left", ({ id }) => {
       const pc = peersRef.current[id];
       if (pc) {
-        try { pc.close(); } catch {}
+        try {
+          pc.close();
+        } catch {}
       }
       delete peersRef.current[id];
       setStreams((prev) => {
@@ -277,7 +305,7 @@ export default function VideoMeet() {
       setParticipants((cur) => cur.filter((p) => p.id !== id));
     });
 
-    // --- NEW: Screen share broadcasts ---
+    // Screen share broadcasts
     socketRef.current.on("screen-share-started", ({ sharingId }) => {
       setSharingId(sharingId);
     });
@@ -298,11 +326,19 @@ export default function VideoMeet() {
   }
 
   function cleanup() {
-    try { socketRef.current?.disconnect(); } catch {}
-    try { screenStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
-    try { localStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
+    try {
+      socketRef.current?.disconnect();
+    } catch {}
+    try {
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    } catch {}
+    try {
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    } catch {}
     for (const pc of Object.values(peersRef.current)) {
-      try { pc.close(); } catch {}
+      try {
+        pc.close();
+      } catch {}
     }
     peersRef.current = {};
     localStreamRef.current = null;
@@ -438,6 +474,7 @@ export default function VideoMeet() {
   }
 
   const hasScreenShare = !!sharingId;
+  const isLocalSharer = sharingId && socketRef.current?.id === sharingId;
 
   return (
     <div className="meet-cute-bg meet-page-cute">
@@ -445,33 +482,42 @@ export default function VideoMeet() {
         <div className="roomLabel">
           Gup-Shap — Room: <span className="roomId">{roomId}</span>
         </div>
-        <div className="countBadge">
-          {participants.length} participants
-        </div>
+        <div className="countBadge">{participants.length} participants</div>
       </div>
       <div className={`videoStageCute ${isSingle ? "singleStage" : ""}`}>
         {hasScreenShare ? (
           <>
-            <div className="screenShareRow" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+            <div
+              className="screenShareRow"
+              style={{ width: "100%", display: "flex", justifyContent: "center" }}
+            >
               {screenTile && (
                 <VideoTile
                   key={screenTile.id}
                   id={screenTile.id}
                   username={screenTile.username}
-                  stream={screenTile.stream}
+                  stream={
+                    // If this client is the sharer, use local screen stream as big tile
+                    isLocalSharer && screenStreamRef.current
+                      ? screenStreamRef.current
+                      : screenTile.stream
+                  }
                   active={screenTile.id === speakingId}
                   sharing={true}
                   pinned={false}
                 />
               )}
             </div>
-            <div className="cameraRow" style={{
-              width: "100%",
-              display: "flex",
-              justifyContent: "center",
-              gap: 30,
-              marginTop: 30
-            }}>
+            <div
+              className="cameraRow"
+              style={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "center",
+                gap: 30,
+                marginTop: 30,
+              }}
+            >
               {cameraTiles.map((tile) => (
                 <VideoTile
                   key={tile.id}
