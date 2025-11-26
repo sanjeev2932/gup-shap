@@ -22,7 +22,8 @@ export default function VideoMeet() {
   const [camOn, setCamOn] = useState(true);
   const [toast, setToast] = useState("");
   const [ready, setReady] = useState(false);
-  const [screenActive, setScreenActive] = useState(false);
+  // NEW: sharingId state (syncs who is sharing across all clients)
+  const [sharingId, setSharingId] = useState(null);
 
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [approved, setApproved] = useState(false);
@@ -85,8 +86,10 @@ export default function VideoMeet() {
       if (screenStreamRef.current) return;
       const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       screenStreamRef.current = screenStream;
-      setScreenActive(true);
+      // Broadcast that this user is sharing
+      socketRef.current.emit("screen-share-started", { sharingId: socketRef.current.id, room: roomId });
 
+      // Replace outgoing video tracks for all peers
       const screenTrack = screenStream.getVideoTracks()[0];
       for (const pc of Object.values(peersRef.current)) {
         const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
@@ -103,7 +106,8 @@ export default function VideoMeet() {
     if (!screenStreamRef.current) return;
     screenStreamRef.current.getTracks().forEach((t) => t.stop());
     screenStreamRef.current = null;
-    setScreenActive(false);
+    // Broadcast stopped sharing
+    socketRef.current.emit("screen-share-stopped", { room: roomId });
     const camTrack = localStreamRef.current?.getVideoTracks()[0];
     for (const pc of Object.values(peersRef.current)) {
       const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
@@ -273,6 +277,14 @@ export default function VideoMeet() {
       setParticipants((cur) => cur.filter((p) => p.id !== id));
     });
 
+    // --- NEW: Screen share broadcasts ---
+    socketRef.current.on("screen-share-started", ({ sharingId }) => {
+      setSharingId(sharingId);
+    });
+    socketRef.current.on("screen-share-stopped", () => {
+      setSharingId(null);
+    });
+
     return () => cleanup();
     // eslint-disable-next-line
   }, [ready]);
@@ -297,6 +309,7 @@ export default function VideoMeet() {
     screenStreamRef.current = null;
     setStreams({});
     setParticipants([]);
+    setSharingId(null);
   }
 
   async function handleJoin() {
@@ -308,13 +321,8 @@ export default function VideoMeet() {
     }
   }
 
-  // -------- LAYOUT LOGIC FOR SCREEN SHARE TOP + CAMERAS BOTTOM --------
+  // Tiles logic — with sharingId state
   const remoteIds = Object.keys(streams);
-
-  // Identify who (if anyone) is sharing: for now, just "local" with screenActive
-  // If you want remote sharing, use a socket event sharingId = "local" or remote id.
-  const sharingId = screenActive ? "local" : null;
-  const hasScreenShare = !!sharingId;
 
   const tiles = [
     ...remoteIds
@@ -330,7 +338,7 @@ export default function VideoMeet() {
           id: "local",
           stream: localStreamRef.current,
           username: "You",
-          sharing: sharingId === "local",
+          sharing: sharingId === socketRef.current?.id,
         }
       : null,
   ].filter(Boolean);
@@ -338,10 +346,6 @@ export default function VideoMeet() {
   const cameraTiles = tiles.filter((tile) => !tile.sharing);
   const screenTile = tiles.find((tile) => tile.sharing) || null;
   const isSingle = tiles.length === 1;
-
-  useEffect(() => {
-    setScreenActive(Boolean(screenStreamRef.current));
-  }, [screenStreamRef.current]);
 
   const speakingId = getSpeakingId(participants);
 
@@ -433,6 +437,8 @@ export default function VideoMeet() {
     );
   }
 
+  const hasScreenShare = !!sharingId;
+
   return (
     <div className="meet-cute-bg meet-page-cute">
       <div className="topbar">
@@ -444,20 +450,20 @@ export default function VideoMeet() {
         </div>
       </div>
       <div className={`videoStageCute ${isSingle ? "singleStage" : ""}`}>
-        {/* SCREEN SHARE LAYOUT */}
         {hasScreenShare ? (
           <>
             <div className="screenShareRow" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-              {/* Big screen share tile */}
-              <VideoTile
-                key={screenTile.id}
-                id={screenTile.id}
-                username={screenTile.username}
-                stream={screenTile.stream}
-                active={screenTile.id === speakingId}
-                sharing={true}
-                pinned={false}
-              />
+              {screenTile && (
+                <VideoTile
+                  key={screenTile.id}
+                  id={screenTile.id}
+                  username={screenTile.username}
+                  stream={screenTile.stream}
+                  active={screenTile.id === speakingId}
+                  sharing={true}
+                  pinned={false}
+                />
+              )}
             </div>
             <div className="cameraRow" style={{
               width: "100%",
@@ -480,8 +486,7 @@ export default function VideoMeet() {
             </div>
           </>
         ) : (
-          // Regular responsive grid when NOT sharing
-          <div className={`videoGridCute${screenActive ? " presentingStage" : ""}`}>
+          <div className="videoGridCute">
             {tiles.map((tile) => (
               <VideoTile
                 key={tile.id}
@@ -504,7 +509,7 @@ export default function VideoMeet() {
         onEndCall={() => (window.location.href = "/")}
         onStartScreenShare={handleStartScreenShare}
         onStopScreenShare={handleStopScreenShare}
-        isSharingScreen={screenActive}
+        isSharingScreen={!!sharingId && socketRef.current?.id === sharingId}
       />
       {toast && <div className="toast">{toast}</div>}
     </div>

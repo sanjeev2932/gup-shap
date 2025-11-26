@@ -3,6 +3,8 @@
 import { Server } from "socket.io";
 
 const rooms = Object.create(null);
+// Track screen sharing for each room
+const screenShares = Object.create(null);
 
 export default function attachSocket(server) {
   const io = new Server(server, {
@@ -30,6 +32,10 @@ export default function attachSocket(server) {
       if (r.members.find((m) => m.id === socket.id)) {
         socket.join(room);
         socket.emit("joined", { members: r.members, isHost: r.hostId === socket.id });
+        // If screen sharing is ongoing, inform the new joiner
+        if (screenShares[room]) {
+          socket.emit("screen-share-started", { sharingId: screenShares[room] });
+        }
         return;
       }
 
@@ -73,6 +79,10 @@ export default function attachSocket(server) {
 
       // Notify approved user
       io.to(userId).emit("approved", { members: r.members, approved: true });
+      // If screen sharing, inform the newly approved user
+      if (screenShares[room]) {
+        io.to(userId).emit("screen-share-started", { sharingId: screenShares[room] });
+      }
       emitMembers(room);
     });
 
@@ -99,7 +109,15 @@ export default function attachSocket(server) {
       io.to(to).emit("signal", { from: socket.id, type, data });
     });
 
-    // ... screen-share, raise-hand, disconnect logic unchanged ...
+    // --- SCREEN SHARE SYNC EVENTS ---
+    socket.on("screen-share-started", ({ sharingId, room }) => {
+      screenShares[room] = sharingId;
+      io.to(room).emit("screen-share-started", { sharingId });
+    });
+    socket.on("screen-share-stopped", ({ room }) => {
+      delete screenShares[room];
+      io.to(room).emit("screen-share-stopped");
+    });
 
     socket.on("disconnect", () => {
       for (const room of Object.keys(rooms)) {
@@ -112,6 +130,11 @@ export default function attachSocket(server) {
           }
           io.in(room).emit("user-left", { id: socket.id });
           emitMembers(room);
+        }
+        // If leaving user was sharing, stop sharing for everyone
+        if (screenShares[room] === socket.id) {
+          delete screenShares[room];
+          io.to(room).emit("screen-share-stopped");
         }
         if (r.members.length === 0) delete rooms[room];
       }
