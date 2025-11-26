@@ -33,7 +33,6 @@ export default function VideoMeet() {
     setTimeout(() => setToast(""), t);
   }
 
-  // Media Helpers
   async function startLocalMedia() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -51,7 +50,6 @@ export default function VideoMeet() {
     }
   }
 
-  // Mute/unmute
   function handleToggleMic() {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -66,7 +64,6 @@ export default function VideoMeet() {
       });
     }
   }
-  // Cam on/off
   function handleToggleCam() {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -81,7 +78,6 @@ export default function VideoMeet() {
       });
     }
   }
-  // Screen share
   async function handleStartScreenShare() {
     try {
       if (screenStreamRef.current) return;
@@ -114,7 +110,6 @@ export default function VideoMeet() {
     if (localRef.current && localStreamRef.current) localRef.current.srcObject = localStreamRef.current;
   }
 
-  // ---- WebRTC peer logic ----
   async function createPeerAndOffer(remoteId) {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -146,7 +141,16 @@ export default function VideoMeet() {
     }
   }
 
-  // ---- CRITICAL: Signal handling for all peers ----
+  // --- Auto-join meeting on mount ---
+  useEffect(() => {
+    if (!ready) {
+      (async () => {
+        await handleJoin();
+      })();
+    }
+    // eslint-disable-next-line
+  }, []);
+
   useEffect(() => {
     if (!ready) return;
     const room = window.location.pathname.split("/")[2] || "lobby";
@@ -215,9 +219,7 @@ export default function VideoMeet() {
       }
     });
 
-    // ---- CRITICAL SIGNAL HANDLER ----
     socketRef.current.on("signal", async ({ from, type, data }) => {
-      // OFFER: create pc, set remote, send answer
       if (type === "offer") {
         let pc = peersRef.current[from];
         if (!pc) {
@@ -242,12 +244,10 @@ export default function VideoMeet() {
         await pc.setLocalDescription(answer);
         socketRef.current.emit("signal", { to: from, type: "answer", data: answer });
       }
-      // ANSWER: finish remote setup
       if (type === "answer") {
         const pc = peersRef.current[from];
         if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data));
       }
-      // CANDIDATE: add ICE
       if (type === "candidate") {
         const pc = peersRef.current[from];
         if (pc) await pc.addIceCandidate(data);
@@ -272,6 +272,7 @@ export default function VideoMeet() {
     });
 
     return () => cleanup();
+    // eslint-disable-next-line
   }, [ready]);
 
   function attachRemoteStream(peerId, stream) {
@@ -340,16 +341,7 @@ export default function VideoMeet() {
     if (pendingRequests.length === 1) setApprovalRequired(false);
   }
 
-  if (!ready) {
-    return (
-      <div className="meet-cute-bg meet-center">
-        <button className="meet-cute-btn" onClick={handleJoin}>
-          Join Call
-        </button>
-        {toast && <div style={{ marginTop: 20, color: "red" }}>{toast}</div>}
-      </div>
-    );
-  }
+  // REMOVE: the old ready=false "Join Call" screen!
 
   if (approvalRequired && !approved && pendingRequests.length === 0) {
     return (
@@ -392,6 +384,19 @@ export default function VideoMeet() {
           ))}
         </div>
         {toast && <div style={{ marginTop: 20, color: "red" }}>{toast}</div>}
+      </div>
+    );
+  }
+
+  // MAIN MEETING UI
+  if (!ready) {
+    // Optional: can show a spinner or a "Setting up media..." message here for a second if setup takes time.
+    return (
+      <div className="meet-cute-bg meet-center">
+        <div className="spinner" />
+        <div style={{ marginTop: 18, fontWeight: 600, color: "#437dda" }}>
+          Setting up your camera and mic...
+        </div>
       </div>
     );
   }
