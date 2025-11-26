@@ -88,7 +88,7 @@ export default function Home() {
               onChange={(e) => setMeetingCode(e.target.value)}
             />
             <button className="btn-primary" onClick={handleJoin}>
-              Join with Code as Guest
+              {isLoggedIn ? "Join with Code" : "Join with Code as Guest"}
             </button>
             {isLoggedIn && (
               <button className="btn-secondary" onClick={createNew}>
