@@ -64,6 +64,7 @@ export default function VideoMeet() {
       });
     }
   }
+
   function handleToggleCam() {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -78,6 +79,7 @@ export default function VideoMeet() {
       });
     }
   }
+
   async function handleStartScreenShare() {
     try {
       if (screenStreamRef.current) return;
@@ -306,8 +308,10 @@ export default function VideoMeet() {
     }
   }
 
-  // Tiles logic - only users with streams (video) are shown
+  // Identify the sharing tile (local sharing only for now)
   const remoteIds = Object.keys(streams);
+  const sharingId = screenActive ? "local" : null;
+
   const tiles = [
     ...remoteIds
       .filter((id) => streams[id])
@@ -315,9 +319,15 @@ export default function VideoMeet() {
         id,
         stream: streams[id],
         username: participants.find((p) => p.id === id)?.username || id,
+        sharing: sharingId === id,
       })),
     localStreamRef.current
-      ? { id: "local", stream: localStreamRef.current, username: "You" }
+      ? {
+          id: "local",
+          stream: localStreamRef.current,
+          username: "You",
+          sharing: sharingId === "local",
+        }
       : null,
   ].filter(Boolean);
 
@@ -341,8 +351,6 @@ export default function VideoMeet() {
     if (pendingRequests.length === 1) setApprovalRequired(false);
   }
 
-  // REMOVE: the old ready=false "Join Call" screen!
-
   if (approvalRequired && !approved && pendingRequests.length === 0) {
     return (
       <div className="meet-cute-bg meet-center">
@@ -364,20 +372,40 @@ export default function VideoMeet() {
           <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 18 }}>
             Approve guests to join your call:
           </div>
-          {pendingRequests.map(req => (
-            <div key={req.userId} style={{
-              background: "#fcf8ff",
-              padding: "18px 22px",
-              borderRadius: "18px",
-              marginBottom: "18px",
-              boxShadow: "0 2px 14px 0px #eecdf3"
-            }}>
-              <span style={{ fontWeight: 600 }}>{req.username || req.userId}</span>
-              <button className="meet-cute-btn" style={{ marginLeft: 20 }} onClick={() => handleApprove(req.userId)}>
+          {pendingRequests.map((req) => (
+            <div
+              key={req.userId}
+              style={{
+                background: "#fcf8ff",
+                padding: "18px 22px",
+                borderRadius: "18px",
+                marginBottom: "18px",
+                boxShadow: "0 2px 14px 0px #eecdf3",
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>
+                {req.username || req.userId}
+              </span>
+              <button
+                className="meet-cute-btn"
+                style={{ marginLeft: 20 }}
+                onClick={() => handleApprove(req.userId)}
+              >
                 Approve
               </button>
-              <button style={{ marginLeft: 6, background: "#ffebee", color: "#db2462", borderRadius: "13px", padding: "8px 16px", border: "none", fontWeight: 600, cursor: "pointer" }}
-                onClick={() => handleReject(req.userId)}>
+              <button
+                style={{
+                  marginLeft: 6,
+                  background: "#ffebee",
+                  color: "#db2462",
+                  borderRadius: "13px",
+                  padding: "8px 16px",
+                  border: "none",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                onClick={() => handleReject(req.userId)}
+              >
                 Reject
               </button>
             </div>
@@ -388,9 +416,7 @@ export default function VideoMeet() {
     );
   }
 
-  // MAIN MEETING UI
   if (!ready) {
-    // Optional: can show a spinner or a "Setting up media..." message here for a second if setup takes time.
     return (
       <div className="meet-cute-bg meet-center">
         <div className="spinner" />
@@ -420,7 +446,7 @@ export default function VideoMeet() {
               username={tile.username}
               stream={tile.stream}
               active={tile.id === speakingId}
-              sharing={screenActive && tile.id === "local"}
+              sharing={tile.sharing}
               pinned={false}
             />
           ))}
@@ -431,7 +457,7 @@ export default function VideoMeet() {
         camOn={camOn}
         onToggleMic={handleToggleMic}
         onToggleCam={handleToggleCam}
-        onEndCall={() => window.location.href = "/"}
+        onEndCall={() => (window.location.href = "/")}
         onStartScreenShare={handleStartScreenShare}
         onStopScreenShare={handleStopScreenShare}
         isSharingScreen={screenActive}

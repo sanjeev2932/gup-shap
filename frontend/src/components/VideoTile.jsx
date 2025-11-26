@@ -1,4 +1,3 @@
-// frontend/src/components/VideoTile.jsx
 import React, { useEffect, useRef } from "react";
 
 export default function VideoTile({
@@ -33,12 +32,14 @@ export default function VideoTile({
 
   return (
     <div
-      className={`participantTile
-        ${sharing ? "screenTile" : ""}
-        ${active ? "active" : ""}
-        ${pinned ? "pinned" : ""}`}
-      onClick={() => onPin(id)}
-      style={{ cursor: "pointer" }}
+      className={
+        "participantTile" +
+        (sharing ? " screenTile" : "") +
+        (active ? " active" : "") +
+        (pinned ? " pinned" : "")
+      }
+      onClick={onPin ? () => onPin(id) : undefined}
+      style={{ cursor: onPin ? "pointer" : "default" }}
       data-peer={id}
     >
       <video
@@ -52,10 +53,7 @@ export default function VideoTile({
       <div className="tileLabel">{username || id}</div>
 
       {raised && <div className="raisedBadge">✋</div>}
-
-      {pinned && (
-        <div className="pinBadge">📌</div>
-      )}
+      {pinned && <div className="pinBadge">📌</div>}
     </div>
   );
 }
