@@ -13,7 +13,6 @@ export default function Home() {
     setIsLoggedIn(!!localStorage.getItem("token"));
   }, []);
 
-  // Update isLoggedIn if token is added/removed during session
   useEffect(() => {
     const interval = setInterval(() => {
       setIsLoggedIn(!!localStorage.getItem("token"));
@@ -21,18 +20,17 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Join: now allows guest (no login needed)
+  // Guest or user can always join with code
   const handleJoin = () => {
     const code = meetingCode.trim();
     if (!code) {
       alert("Enter a valid meeting code.");
       return;
     }
-    // No login check—anyone can join as guest!
     navigate(`/meet/${code}`);
   };
 
-  // "New" meeting is login-protected
+  // Only logged-in users can create a new meeting
   const createNew = () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -92,9 +90,11 @@ export default function Home() {
             <button className="btn-primary" onClick={handleJoin}>
               Join with Code as Guest
             </button>
-            <button className="btn-secondary" onClick={createNew}>
-              New
-            </button>
+            {isLoggedIn && (
+              <button className="btn-secondary" onClick={createNew}>
+                Start a Meeting
+              </button>
+            )}
           </div>
           {!isLoggedIn && (
             <div style={{ color: "#db2462", marginTop: "18px", fontWeight: "600" }}>
