@@ -308,9 +308,13 @@ export default function VideoMeet() {
     }
   }
 
-  // Identify the sharing tile (local sharing only for now)
+  // -------- LAYOUT LOGIC FOR SCREEN SHARE TOP + CAMERAS BOTTOM --------
   const remoteIds = Object.keys(streams);
+
+  // Identify who (if anyone) is sharing: for now, just "local" with screenActive
+  // If you want remote sharing, use a socket event sharingId = "local" or remote id.
   const sharingId = screenActive ? "local" : null;
+  const hasScreenShare = !!sharingId;
 
   const tiles = [
     ...remoteIds
@@ -331,6 +335,8 @@ export default function VideoMeet() {
       : null,
   ].filter(Boolean);
 
+  const cameraTiles = tiles.filter((tile) => !tile.sharing);
+  const screenTile = tiles.find((tile) => tile.sharing) || null;
   const isSingle = tiles.length === 1;
 
   useEffect(() => {
@@ -438,19 +444,57 @@ export default function VideoMeet() {
         </div>
       </div>
       <div className={`videoStageCute ${isSingle ? "singleStage" : ""}`}>
-        <div className={`videoGridCute${screenActive ? " presentingStage" : ""}`}>
-          {tiles.map((tile) => (
-            <VideoTile
-              key={tile.id}
-              id={tile.id}
-              username={tile.username}
-              stream={tile.stream}
-              active={tile.id === speakingId}
-              sharing={tile.sharing}
-              pinned={false}
-            />
-          ))}
-        </div>
+        {/* SCREEN SHARE LAYOUT */}
+        {hasScreenShare ? (
+          <>
+            <div className="screenShareRow" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+              {/* Big screen share tile */}
+              <VideoTile
+                key={screenTile.id}
+                id={screenTile.id}
+                username={screenTile.username}
+                stream={screenTile.stream}
+                active={screenTile.id === speakingId}
+                sharing={true}
+                pinned={false}
+              />
+            </div>
+            <div className="cameraRow" style={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              gap: 30,
+              marginTop: 30
+            }}>
+              {cameraTiles.map((tile) => (
+                <VideoTile
+                  key={tile.id}
+                  id={tile.id}
+                  username={tile.username}
+                  stream={tile.stream}
+                  active={tile.id === speakingId}
+                  sharing={false}
+                  pinned={false}
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          // Regular responsive grid when NOT sharing
+          <div className={`videoGridCute${screenActive ? " presentingStage" : ""}`}>
+            {tiles.map((tile) => (
+              <VideoTile
+                key={tile.id}
+                id={tile.id}
+                username={tile.username}
+                stream={tile.stream}
+                active={tile.id === speakingId}
+                sharing={tile.sharing}
+                pinned={false}
+              />
+            ))}
+          </div>
+        )}
       </div>
       <CallControls
         micOn={micOn}
