@@ -1,6 +1,11 @@
 // backend/src/routes/history.routes.js
 import express from "express";
-import { addHistory, getHistory } from "../controllers/history.controller.js";
+import {
+  addHistory,
+  getHistory,
+  deleteHistoryItem,
+  bulkDeleteHistory,
+} from "../controllers/history.controller.js";
 import auth from "../middleware/auth.js";
 
 const router = express.Router();
@@ -18,5 +23,19 @@ router.post("/add", auth, addHistory);
  * @access Private
  */
 router.get("/", auth, getHistory);
+
+/**
+ * @route DELETE /api/v1/history/:id
+ * @desc Delete one history item
+ * @access Private
+ */
+router.delete("/:id", auth, deleteHistoryItem);
+
+/**
+ * @route POST /api/v1/history/bulk-delete
+ * @desc Delete many history items
+ * @access Private
+ */
+router.post("/bulk-delete", auth, bulkDeleteHistory);
 
 export default router;
