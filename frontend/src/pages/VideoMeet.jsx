@@ -28,6 +28,7 @@ export default function VideoMeet() {
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [approved, setApproved] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [isHost, setIsHost] = useState(false);
 
   function showToast(msg, t = 2500) {
     setToast(msg);
@@ -229,10 +230,12 @@ export default function VideoMeet() {
     socketRef.current.on("joined", async (payload) => {
       setParticipants(payload.members || []);
       if (payload.isHost) {
+        setIsHost(true);
         setApproved(true);
         setApprovalRequired(false);
         showToast("You joined as Host");
       } else if (payload.approved) {
+        setIsHost(false);
         setApproved(true);
         setApprovalRequired(false);
         showToast("You joined the room");
@@ -311,6 +314,12 @@ export default function VideoMeet() {
     });
     socketRef.current.on("screen-share-stopped", () => {
       setSharingId(null);
+    });
+
+    // Host removed this user
+    socketRef.current.on("kicked", () => {
+      alert("You have been removed from this meeting by the host.");
+      window.location.href = "/";
     });
 
     return () => cleanup();
@@ -395,6 +404,12 @@ export default function VideoMeet() {
     socketRef.current.emit("reject-join", { room: roomId, userId });
     setPendingRequests((reqs) => reqs.filter((r) => r.userId !== userId));
     if (pendingRequests.length === 1) setApprovalRequired(false);
+  }
+
+  function handleKick(userId) {
+    if (!isHost) return;
+    if (userId === "local" || userId === socketRef.current?.id) return;
+    socketRef.current.emit("kick-user", { room: roomId, userId });
   }
 
   if (approvalRequired && !approved && pendingRequests.length === 0) {
@@ -505,6 +520,8 @@ export default function VideoMeet() {
                   active={screenTile.id === speakingId}
                   sharing={true}
                   pinned={false}
+                  canKick={false}
+                  onKick={undefined}
                 />
               )}
             </div>
@@ -527,6 +544,8 @@ export default function VideoMeet() {
                   active={tile.id === speakingId}
                   sharing={false}
                   pinned={false}
+                  canKick={isHost && tile.id !== "local"}
+                  onKick={handleKick}
                 />
               ))}
             </div>
@@ -542,6 +561,8 @@ export default function VideoMeet() {
                 active={tile.id === speakingId}
                 sharing={tile.sharing}
                 pinned={false}
+                canKick={isHost && tile.id !== "local"}
+                onKick={handleKick}
               />
             ))}
           </div>

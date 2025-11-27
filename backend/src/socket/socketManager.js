@@ -114,9 +114,36 @@ export default function attachSocket(server) {
       screenShares[room] = sharingId;
       io.to(room).emit("screen-share-started", { sharingId });
     });
+
     socket.on("screen-share-stopped", ({ room }) => {
       delete screenShares[room];
       io.to(room).emit("screen-share-stopped");
+    });
+
+    // --- HOST KICK USER ---
+    socket.on("kick-user", ({ room = "lobby", userId } = {}) => {
+      const r = rooms[room];
+      if (!r || r.hostId !== socket.id) return; // only host can kick
+
+      const idx = r.members.findIndex((m) => m.id === userId);
+      if (idx === -1) return;
+
+      // Remove from room members
+      r.members.splice(idx, 1);
+
+      // Notify kicked user so client can leave
+      io.to(userId).emit("kicked", { room });
+
+      // Inform others that user left
+      io.in(room).emit("user-left", { id: userId });
+
+      // If the kicked user was sharing, stop screen share
+      if (screenShares[room] === userId) {
+        delete screenShares[room];
+        io.to(room).emit("screen-share-stopped");
+      }
+
+      emitMembers(room);
     });
 
     socket.on("disconnect", () => {

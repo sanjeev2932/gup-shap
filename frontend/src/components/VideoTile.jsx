@@ -1,5 +1,3 @@
-import React, { useEffect, useRef } from "react";
-
 export default function VideoTile({
   id,
   username,
@@ -8,27 +6,11 @@ export default function VideoTile({
   sharing = false,
   raised = false,
   pinned = false,
-  onPin, // callback from parent
+  onPin,
+  canKick = false,
+  onKick,
 }) {
-  const videoRef = useRef();
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-
-    if (stream) {
-      try {
-        v.srcObject = stream;
-      } catch {
-        v.src = URL.createObjectURL(stream);
-      }
-    } else {
-      try {
-        v.srcObject = null;
-      } catch {}
-      v.removeAttribute("src");
-    }
-  }, [stream]);
+  // ...existing code...
 
   return (
     <div
@@ -39,7 +21,7 @@ export default function VideoTile({
         (pinned ? " pinned" : "")
       }
       onClick={onPin ? () => onPin(id) : undefined}
-      style={{ cursor: onPin ? "pointer" : "default" }}
+      style={{ cursor: onPin ? "pointer" : "default", position: "relative" }}
       data-peer={id}
     >
       <video
@@ -54,6 +36,18 @@ export default function VideoTile({
 
       {raised && <div className="raisedBadge">✋</div>}
       {pinned && <div className="pinBadge">📌</div>}
+
+      {canKick && id !== "local" && (
+        <button
+          className="kickBtn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onKick && onKick(id);
+          }}
+        >
+          Remove
+        </button>
+      )}
     </div>
   );
 }
