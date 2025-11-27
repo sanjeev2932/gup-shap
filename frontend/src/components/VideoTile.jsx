@@ -59,10 +59,11 @@ export default function VideoTile({
 
       {canKick && id !== "local" && (
         <button
+          type="button"
           className="kickBtn"
           onClick={(e) => {
             e.stopPropagation();
-            onKick && onKick(id);
+            if (onKick) onKick(id);
           }}
         >
           Remove

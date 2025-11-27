@@ -167,6 +167,26 @@
   border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
+.kickBtn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: none;
+  background: #ff4d67;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.kickBtn:hover {
+  background: #ff304e;
+}
+
+
 /* Responsive for cerulean layout */
 @media (max-width: 1200px) {
   .participantTile.screenTile {
