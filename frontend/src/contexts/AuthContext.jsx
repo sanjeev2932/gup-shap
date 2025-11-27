@@ -15,10 +15,8 @@ export function AuthProvider({ children }) {
     }
   });
 
-  // Build API base reliably:
   // server => "https://host" ; we want "https://host/api/v1"
- const API = `${server}/api/v1`;
-
+  const API = `${server}/api/v1`;
 
   // persist token
   useEffect(() => {
@@ -38,35 +36,55 @@ export function AuthProvider({ children }) {
       }
       return { ok: false, message: res?.data?.message || "Login failed" };
     } catch (err) {
-      // Return friendly error to UI (avoid raw stack)
-      return { ok: false, message: err?.response?.data?.message || err.message || "Network error" };
+      return {
+        ok: false,
+        message:
+          err?.response?.data?.message || err.message || "Network error",
+      };
     }
   };
 
   // REGISTER
   const register = async (name, username, password) => {
     try {
-      const res = await axios.post(`${API}/users/register`, { name, username, password });
+      const res = await axios.post(`${API}/users/register`, {
+        name,
+        username,
+        password,
+      });
       if (res?.data?.success) return { ok: true };
-      return { ok: false, message: res?.data?.message || "Registration failed" };
+      return {
+        ok: false,
+        message: res?.data?.message || "Registration failed",
+      };
     } catch (err) {
-      return { ok: false, message: err?.response?.data?.message || err.message || "Network error" };
+      return {
+        ok: false,
+        message:
+          err?.response?.data?.message || err.message || "Network error",
+      };
     }
   };
 
   // ADD TO USER HISTORY
-  const addToUserHistory = async (roomId) => {
+  // extra optional info can be passed in meta:
+  // { hostName, participants, startedAt, endedAt, durationSeconds }
+  const addToUserHistory = async (roomId, meta = {}) => {
     if (!token) return { ok: false, message: "Not authenticated" };
     try {
       await axios.post(
         `${API}/history/add`,
-        { roomId },
+        { roomId, ...meta },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return { ok: true };
     } catch (err) {
       console.log("History Add Error:", err?.response || err);
-      return { ok: false, message: err?.response?.data?.message || err.message || "Failed" };
+      return {
+        ok: false,
+        message:
+          err?.response?.data?.message || err.message || "Failed",
+      };
     }
   };
 
@@ -81,6 +99,42 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.log("History Fetch Error:", err?.response || err);
       return [];
+    }
+  };
+
+  // DELETE ONE HISTORY ITEM
+  const deleteHistoryItem = async (id) => {
+    if (!token) return { ok: false, message: "Not authenticated" };
+    try {
+      await axios.delete(`${API}/history/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        message:
+          err?.response?.data?.message || err.message || "Failed",
+      };
+    }
+  };
+
+  // BULK DELETE HISTORY
+  const bulkDeleteHistory = async (ids) => {
+    if (!token) return { ok: false, message: "Not authenticated" };
+    try {
+      await axios.post(
+        `${API}/history/bulk-delete`,
+        { ids },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        message:
+          err?.response?.data?.message || err.message || "Failed",
+      };
     }
   };
 
@@ -102,6 +156,8 @@ export function AuthProvider({ children }) {
         logout,
         addToUserHistory,
         getUserHistory,
+        deleteHistoryItem,
+        bulkDeleteHistory,
       }}
     >
       {children}
