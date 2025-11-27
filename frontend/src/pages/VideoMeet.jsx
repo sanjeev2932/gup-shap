@@ -573,7 +573,7 @@ export default function VideoMeet() {
         camOn={camOn}
         onToggleMic={handleToggleMic}
         onToggleCam={handleToggleCam}
-        onEndCall={() => (window.location.href = "/")}
+        onEndCall={() => (window.location.href = "/home")}
         onStartScreenShare={handleStartScreenShare}
         onStopScreenShare={handleStopScreenShare}
         isSharingScreen={!!sharingId && socketRef.current?.id === sharingId}
