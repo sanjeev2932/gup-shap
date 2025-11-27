@@ -1,3 +1,5 @@
+import React, { useEffect, useRef } from "react";
+
 export default function VideoTile({
   id,
   username,
@@ -6,11 +8,29 @@ export default function VideoTile({
   sharing = false,
   raised = false,
   pinned = false,
-  onPin,
+  onPin,        // callback from parent
   canKick = false,
   onKick,
 }) {
-  // ...existing code...
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    if (stream) {
+      try {
+        v.srcObject = stream;
+      } catch {
+        v.src = URL.createObjectURL(stream);
+      }
+    } else {
+      try {
+        v.srcObject = null;
+      } catch {}
+      v.removeAttribute("src");
+    }
+  }, [stream]);
 
   return (
     <div
