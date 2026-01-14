@@ -56,7 +56,7 @@ export default function Authentication() {
   return (
     <div className="authPage">
       <header className="authHeader">
-        <h2 className="logoText">Gup-Shap</h2>
+        <h2 className="logoText">chatarpatar</h2>
         <button className="backBtn" onClick={() => navigate("/")}>
           ← Back
         </button>

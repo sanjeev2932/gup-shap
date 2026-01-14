@@ -25,7 +25,7 @@ export default function Landing() {
 
       {/* NAVBAR */}
       <nav className="landingNavbar">
-        <div className="navLogo">Gup-Shap</div>
+        <div className="navLogo">chatarpatar</div>
 
         <div className="navActions">
           <button className="bubbleBtn white" onClick={() => openAuth("signup")}>
@@ -47,7 +47,7 @@ export default function Landing() {
             <span className="colorPurple"> Laugh.</span>
             <span className="colorMango"> Talk.</span>
             <br />
-            <span className="colorNeon">Gup-Shap.</span>
+            <span className="colorNeon">chatarpatar.</span>
           </h1>
 
           <p className="heroSubtitle">

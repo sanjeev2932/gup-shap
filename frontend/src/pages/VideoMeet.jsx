@@ -495,7 +495,7 @@ export default function VideoMeet() {
     <div className="meet-cute-bg meet-page-cute">
       <div className="topbar">
         <div className="roomLabel">
-          Gup-Shap — Room: <span className="roomId">{roomId}</span>
+          chatarpatar — Room: <span className="roomId">{roomId}</span>
         </div>
         <div className="countBadge">{participants.length} participants</div>
       </div>
